@@ -277,6 +277,12 @@ If TYPE is nil, the section won't be highlighted."
     s))
 
 (defmacro monky-with-section (title type &rest body)
+  "Create a new section of title TITLE and type TYPE and evaluate BODY there.
+
+Sections create into BODY will be child of the new section.
+BODY must leave point at the end of the created section.
+
+If TYPE is nil, the section won't be highlighted."
   (declare (indent 2))
   "doc."
   (let ((s (make-symbol "*section*")))
@@ -286,7 +292,8 @@ If TYPE is nil, the section won't be highlighted."
        ,@body
        (setf (monky-section-end ,s) (point))
        (setf (monky-section-children ,s)
-	     (nreverse (monky-section-children ,s))))))
+	     (nreverse (monky-section-children ,s)))
+       ,s)))
 
 (defmacro monky-create-buffer-sections (&rest body)
   "Empty current buffer of text and monky's section, and then evaluate BODY."
@@ -361,12 +368,13 @@ If the car of PREFIX is the symbol '*, then return non-nil if the cdr of PREFIX
 is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
   (or (null prefix)
       (if (eq (car prefix) '*)
-          (or (monky-prefix-p (cdr prefix) list)
-              (and (not (null list))
-                   (monky-prefix-p prefix (cdr list))))
-        (and (not (null list))
-             (equal (car prefix) (car list))
-             (monky-prefix-p (cdr prefix) (cdr list))))))
+	  (or (monky-prefix-p (cdr prefix) list)
+	      (and (not (null list))
+		   (monky-prefix-p prefix (cdr list))))
+	(and (not (null list))
+	     (equal (car prefix) (car list))
+	     (monky-prefix-p (cdr prefix) (cdr list))))))
+
 
 (defun monky-hg-section (type title buffer-title washer &rest args)
   (apply #'monky-insert-section
@@ -508,10 +516,11 @@ and throws an error otherwise."
 (defun monkey-refresh-status ()
   (monky-create-buffer-sections
     (monky-with-section 'status nil
-      (monky-insert-untracked-files))))
+      (monky-insert-untracked-files)
+      (monky-insert-changes))))
 
 
-;;; Untracked files
+;; Untracked files
 
 (defun monky-wash-untracked-file ()
   (if (looking-at "^? \\(.*\\)$")
@@ -532,6 +541,157 @@ and throws an error otherwise."
 	     (monky-wash-sequence #'monky-wash-untracked-file))
 	   "status" "-u")))
 
+(defun monky-put-line-property (prop val)
+  (put-text-property (line-beginning-position) (line-beginning-position 2)
+		     prop val))
+;; Hunk
+(defun monky-hunk-item-diff (hunk)
+  (let ((diff (monky-section-parent hunk)))
+    (or (eq (monky-section-type diff) 'diff)
+	(error "Huh?  Parent of hunk not a diff"))
+    diff))
+
+(defun monky-hunk-item-target-line (hunk)
+  (save-excursion
+    (beginning-of-line)
+    (let ((line (line-number-at-pos)))
+      (if (looking-at "-")
+	  (error "Can't visit removed lines"))
+      (goto-char (monky-section-beginning hunk))
+      (if (not (looking-at "@@+ .* \\+\\([0-9]+\\),[0-9]+ @@+"))
+	  (error "Hunk header not found"))
+      (let ((target (string-to-number (match-string 1))))
+	(forward-line)
+	(while (< (line-number-at-pos) line)
+	  ;; XXX - deal with combined diffs
+	  (if (not (looking-at "-"))
+	      (setq target (+ target 1)))
+	  (forward-line))
+	target))))
+
+(defun monky-wash-hunk ()
+  (if (looking-at "\\(^@+\\)[^@]*@+")
+      (let ((n-columns (1- (length (match-string 1))))
+	    (head (match-string 0)))
+	(monky-with-section head 'hunk
+	  (add-text-properties (match-beginning 0) (match-end 0)
+			       '(face monky-diff-hunk-header))
+	  (forward-line)
+	  (while (not (or (eobp)
+			  (looking-at "^diff\\|^@@")))
+	    (let ((prefix (buffer-substring-no-properties
+			   (point) (min (+ (point) n-columns) (point-max)))))
+	      (cond ((string-match "\\+" prefix)
+		     (monky-put-line-property 'face 'monky-diff-add))
+		    ((string-match "-" prefix)
+		     (monky-put-line-property 'face 'monky-diff-del))
+		    (t
+		     (monky-put-line-property 'face 'monky-diff-none))))
+	    (forward-line))))
+    nil))
+
+;; Diff
+
+(defun monky-diff-item-kind (diff)
+  (car (monky-section-info diff)))
+
+(defun monky-diff-item-file (diff)
+  (cadr (monky-section-info diff)))
+
+(defun monky-diff-line-file ()
+  (cond ((looking-at "^diff --git ./\\(.*\\) ./\\(.*\\)$")
+	 (match-string-no-properties 2))
+	((looking-at "^diff --cc +\\(.*\\)$")
+	 (match-string-no-properties 1))
+	(t
+	 nil)))
+
+(defun monky-wash-diff-section ()
+  (if (looking-at "^diff")
+      (let ((file (monky-diff-line-file))
+	    (end (save-excursion
+		   (forward-line)
+		   (if (search-forward-regexp "^diff\\|^@@" nil t)
+		       (goto-char (match-beginning 0))
+		     (goto-char (point-max)))
+		   (point-marker))))
+	(let* ((status (cond
+			((looking-at "^diff --cc")
+			 'unmerged)
+			((save-excursion
+			   (search-forward-regexp "^new file" end t))
+			 'new)
+			((save-excursion
+			   (search-forward-regexp "^deleted" end t))
+			 'deleted)
+			((save-excursion
+			   (search-forward-regexp "^rename" end t))
+			 'renamed)
+			(t
+			 'modified)))
+	       (file2 (cond
+		       ((save-excursion
+			  (search-forward-regexp "^rename from \\(.*\\)"
+						 end t))
+			(match-string-no-properties 1)))))
+	  (monky-set-section-info (list status file file2))
+	  (monky-insert-diff-title status file file2)
+	  (goto-char end)
+	  (let ((monky-section-hidden-default nil))
+	    (monky-wash-sequence #'monky-wash-hunk))))
+    nil))
+
+;; TODO cleanup
+(defun monky-insert-diff (file)
+  (let ((p (point)))
+    (monky-hg-shell (list "diff" "--git" file))
+    (if (not (eq (char-before) ?\n))
+	(insert "\n"))
+    (save-restriction
+      (narrow-to-region p (point))
+      (goto-char p)
+      (monky-wash-diff-section)
+      (goto-char (point-max)))))
+
+(defun monky-insert-diff-title (status file file2)
+  (let ((status-text (case status
+		       (modified (format "Modified %s" file))
+		       (new (format "New      %s" file))
+		       (deleted (format "Deleted  %s" file))
+		       (renamed (format "Renamed %s (from %s"
+					file file2))
+		       (t (format "?        %s" file)))))
+    (insert "\t" status-text "\n")))
+
+;; Changes
+
+(defvar monky-hide-diffs nil)
+
+(defun monky-wash-statuses ()
+  (monky-wash-sequence #'monky-wash-status))
+
+(defun monky-wash-status ()
+  (if (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$")
+      (let ((status (case (string-to-char (match-string-no-properties 1))
+		      (?M 'modified)
+		      (?A 'new)
+		      (?R 'removed)
+		      (?! 'deleted)
+		      (?C 'clean)
+		      (?I 'ignored)
+		      (t nil)))
+	    (file (match-string-no-properties 2))
+	    (monky-section-hidden-default monky-hide-diffs))
+	(monky-with-section file 'diff
+	  (delete-region (point) (+ (line-end-position) 1))
+	  (monky-insert-diff file))
+	t)
+    nil))
+
+(defun monky-insert-changes ()
+  (monky-hg-section 'changes nil "Changes" 'monky-wash-statuses
+		    "status" "--modified" "--added" "--removed"))
+
 (defun monky-visit-item (&optional other-window)
   "Visit current item.
 With a prefix argument, visit in other window."
@@ -539,7 +699,15 @@ With a prefix argument, visit in other window."
   (monky-section-action (item info "visit")
     ((untracked file)
      (funcall (if other-window 'find-file-other-window 'find-file)
-	      info))))
+	      info))
+    ((diff)
+     (find-file (monky-diff-item-file item)))
+    ((hunk)
+     (let ((file (monky-diff-item-file (monky-hunk-item-diff item)))
+	   (line (monky-hunk-item-target-line item)))
+       (find-file file)
+       (goto-char (point-min))
+       (forward-line (1- line))))))
 
 (setq monky-status-mode-map
       (let ((map (make-keymap)))
@@ -568,6 +736,7 @@ With a prefix argument, visit in other window."
       (let ((map (make-keymap)))
 	(suppress-keymap map t)
 	(define-key map (kbd "RET") 'monky-visit-item)
+;	(define-key map (kbd "TAB") 'monky-toggle-section)
 	map))
 
 (setq default-directory "/home/ananth/monky/")
