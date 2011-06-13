@@ -285,10 +285,15 @@ If TYPE is nil, the section won't be highlighted."
   (let* ((s (make-monky-section :parent monky-top-section
 				:title title
 				:type type
-				:hidden monky-section-hidden-default)))
+				:hidden monky-section-hidden-default))
+	 (old (and monky-old-top-section
+		   (monky-find-section (monky-section-path s)
+				       monky-old-top-section))))
     (if monky-top-section
 	(push s (monky-section-children monky-top-section))
 	(setq monky-top-section s))
+    (if old
+	(setf (monky-section-hidden s) (monky-section-hidden old)))
     s))
 
 (defmacro monky-with-section (title type &rest body)
@@ -321,7 +326,9 @@ If TYPE is nil, the section won't be highlighted."
        (when (null monky-top-section)
 	 (monky-with-section 'top nil
 			     (insert "(empty)\n")))
-       (monky-propertize-section monky-top-section))))
+       (monky-propertize-section monky-top-section)
+       (monky-section-set-hidden monky-top-section
+       				 (monky-section-hidden monky-top-section)))))
 
 (defun monky-propertize-section (section)
   "Add text-property needed for SECTION."
@@ -330,6 +337,24 @@ If TYPE is nil, the section won't be highlighted."
 		     'monky-section section)
   (dolist (s (monky-section-children section))
     (monky-propertize-section s)))
+
+(defun monky-find-section (path top)
+  "Find the section at the path PATH in subsection of section TOP."
+  (if (null path)
+      top
+    (let ((secs (monky-section-children top)))
+      (while (and secs (not (equal (car path)
+				   (monky-section-title (car secs)))))
+	(setq secs (cdr secs)))
+      (and (car secs)
+	   (monky-find-section (cdr path) (car secs))))))
+
+(defun monky-section-path (section)
+  "Return the path of SECTION."
+  (if (not (monky-section-parent section))
+      '()
+    (append (monky-section-path (monky-section-parent section))
+	    (list (monky-section-title section)))))
 
 (defun monky-insert-section (type title buffer-title washer cmd &rest args)
   (let* ((section (monky-with-section title type
@@ -531,6 +556,10 @@ and throws an error otherwise."
     (if monky-refresh-function
 	(apply monky-refresh-function
 	       monky-refresh-args))))
+
+(defun monky-refresh ()
+  (interactive)
+  (error "Not implemented"))
 
 ;; utils
 
@@ -751,8 +780,9 @@ and throws an error otherwise."
     nil))
 
 (defun monky-insert-changes ()
-  (monky-hg-section 'changes nil "Changes" 'monky-wash-statuses
-		    "status" "--modified" "--added" "--removed"))
+  (let ((monky-hide-diffs t))
+    (monky-hg-section 'changes nil "Changes" 'monky-wash-statuses
+		      "status" "--modified" "--added" "--removed")))
 
 (defun monky-visit-item (&optional other-window)
   "Visit current item.
