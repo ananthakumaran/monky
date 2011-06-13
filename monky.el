@@ -20,7 +20,10 @@
 
 ;;; Commentary:
 
-
+;; TODO
+;; check the hg diff format
+;; difference between removed and deleted file
+;; add env HGPLAIN
 ;;; Code:
 
 (defgroup monky nil
@@ -245,11 +248,24 @@ Many Monky faces inherit from this one by default."
   "Face for selected options on monky's menu"
   :group 'monky-faces)
 
-
-(setq monky-hg-executable "hg")
-
-(setq monky-top-section nil)
+(defvar monky-top-section nil
+  "The top section of the current buffer.")
 (make-variable-buffer-local 'monky-top-section)
+(put 'monky-top-section 'permanent-local t)
+
+(defvar monky-old-top-section nil)
+(defvar monky-section-hidden-default nil)
+
+;;; Sections
+
+;; A buffer in monky-mode is organized into hierarchical sections.
+;; These sections are used for navigation and for hiding parts of the
+;; buffer.
+;;
+;; Most sections also represent the objects that Monky works with,
+;; such as files, diffs, hunks, commits, etc.  The 'type' of a section
+;; identifies what kind of object it represents (if any), and the
+;; parent and grand-parent, etc provide the context.
 
 (defstruct monky-section
   parent children beginning end type title hidden info
@@ -258,7 +274,6 @@ Many Monky faces inherit from this one by default."
 (defun monky-set-section-info (info &optional section)
   (setf (monky-section-info (or section monky-top-section)) info))
 
-(setq monky-section-hidden-default nil)
 
 (defun monky-new-section (title type)
   "Create a new section with title TITLE and type TYPE in current buffer.
@@ -344,6 +359,8 @@ If TYPE is nil, the section won't be highlighted."
 	      (delq section (monky-section-children parent)))
       (setq monky-top-section nil))))
 
+
+
 (defun monky-current-section ()
   "Return the monky section at point."
   (or (get-text-property (point) 'monky-section)
@@ -392,8 +409,53 @@ FUNC should leave point at the end of the modified region"
   (while (and (not (eobp))
 	      (funcall func))))
 
+;; View selection
+
+(defun monky-set-section-needs-refresh-on-show (flag &optional section)
+  (setf (monky-section-needs-refresh-on-show
+	 (or section monky-top-section))
+	flag))
+
+(defun monky-section-set-hidden (section hidden)
+  "Hide SECTION if HIDDEN is not nil, show it otherwise."
+  (setf (monky-section-hidden section) hidden)
+  (if (and (not hidden)
+	   (monky-section-needs-refresh-on-show section))
+      (monky-refresh)
+    (let ((inhibit-read-only t)
+	  (beg (save-excursion
+		 (goto-char (monky-section-beginning section))
+		 (forward-line)
+		 (point)))
+	  (end (monky-section-end section)))
+      (put-text-property beg end 'invisible hidden))
+    (if (not hidden)
+	(dolist (c (monky-section-children section))
+	  (monky-section-set-hidden c (monky-section-hidden c))))))
+
+(defun monky-section-hideshow (flag-or-func)
+  "Show or hide current section depending on FLAG-OR-FUNC.
+
+If FLAG-OR-FUNC is a function, it will be ran on current section
+IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, shown otherwise"
+  (let ((section (monky-current-section)))
+    (when (monky-section-parent section)
+      (goto-char (monky-section-beginning section))
+      (if (functionp flag-or-func)
+	  (funcall flag-or-func section)
+	  (monky-section-set-hidden section flag-or-func)))))
+
+(defun monky-toggle-section ()
+  "Toggle hidden status of current section."
+  (interactive)
+  (monky-section-hideshow
+   (lambda (s)
+     (monky-section-set-hidden s (not (monky-section-hidden s))))))
+
 (setq monky-process nil)
 (setq monky-process-buffer-name "*monky-process")
+
+;; Actions
 
 (defmacro monky-section-action (head &rest clauses)
   (declare (indent 1))
@@ -736,7 +798,7 @@ With a prefix argument, visit in other window."
       (let ((map (make-keymap)))
 	(suppress-keymap map t)
 	(define-key map (kbd "RET") 'monky-visit-item)
-;	(define-key map (kbd "TAB") 'monky-toggle-section)
+	(define-key map (kbd "TAB") 'monky-toggle-section)
 	map))
 
 (setq default-directory "/home/ananth/monky/")
