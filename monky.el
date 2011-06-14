@@ -256,6 +256,12 @@ Many Monky faces inherit from this one by default."
 (defvar monky-old-top-section nil)
 (defvar monky-section-hidden-default nil)
 
+(defvar monky-staged-files '()
+  "List of staged files")
+
+(make-variable-buffer-local 'monky-staged-files)
+(put 'monky-staged-files 'permanent-local t)
+
 ;;; Sections
 
 ;; A buffer in monky-mode is organized into hierarchical sections.
@@ -291,7 +297,7 @@ If TYPE is nil, the section won't be highlighted."
 				       monky-old-top-section))))
     (if monky-top-section
 	(push s (monky-section-children monky-top-section))
-	(setq monky-top-section s))
+      (setq monky-top-section s))
     (if old
 	(setf (monky-section-hidden s) (monky-section-hidden old)))
     s))
@@ -325,10 +331,10 @@ If TYPE is nil, the section won't be highlighted."
        ,@body
        (when (null monky-top-section)
 	 (monky-with-section 'top nil
-			     (insert "(empty)\n")))
+	   (insert "(empty)\n")))
        (monky-propertize-section monky-top-section)
        (monky-section-set-hidden monky-top-section
-       				 (monky-section-hidden monky-top-section)))))
+				 (monky-section-hidden monky-top-section)))))
 
 (defun monky-propertize-section (section)
   "Add text-property needed for SECTION."
@@ -356,8 +362,29 @@ If TYPE is nil, the section won't be highlighted."
     (append (monky-section-path (monky-section-parent section))
 	    (list (monky-section-title section)))))
 
-(defun monky-insert-section (type title buffer-title washer cmd &rest args)
-  (let* ((section (monky-with-section title type
+(defun monky-insert-section (section-title-and-type buffer-title washer cmd &rest args)
+  "Run CMD and put its result in a new section.
+
+SECTION-TITLE-AND-TYPE is either a string that is the title of the section
+or (TITLE . TYPE) where TITLE is the title of the section and TYPE is its type.
+
+If there is no type, or if type is nil, the section won't be highlighted.
+
+BUFFER-TITLE is the inserted title of the section
+
+WASHER is a function that will be run after CMD.
+The buffer will be narrowed to the inserted text.
+It should add sectioning as needed for magit interaction
+
+CMD is an external command that will be run with ARGS as arguments"
+  (let* ((body-beg nil)
+	 (section-title (if (consp section-title-and-type)
+			    (car section-title-and-type)
+			  section-title-and-type))
+	 (section-type (if (consp section-title-and-type)
+			   (cdr section-title-and-type)
+			 nil))
+	 (section (monky-with-section section-title section-type
 		    (if buffer-title
 			(insert (propertize buffer-title 'face 'monky-section-title) "\n"))
 		    (setq body-beg (point))
@@ -418,10 +445,9 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 	     (monky-prefix-p (cdr prefix) (cdr list))))))
 
 
-(defun monky-hg-section (type title buffer-title washer &rest args)
+(defun monky-hg-section (section-title-and-type buffer-title washer &rest args)
   (apply #'monky-insert-section
-	 type
-	 title
+	 section-title-and-type
 	 buffer-title
 	 washer
 	 monky-hg-executable
@@ -468,7 +494,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (goto-char (monky-section-beginning section))
       (if (functionp flag-or-func)
 	  (funcall flag-or-func section)
-	  (monky-section-set-hidden section flag-or-func)))))
+	(monky-section-set-hidden section flag-or-func)))))
 
 (defun monky-toggle-section ()
   "Toggle hidden status of current section."
@@ -484,7 +510,8 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 
 (defmacro monky-section-action (head &rest clauses)
   (declare (indent 1))
-  `(monky-section-case ,head ,@clauses))
+  `(monky-with-refresh
+     (monky-section-case ,head ,@clauses)))
 
 (defmacro monky-section-case (head &rest clauses)
   "Make different action depending of current section.
@@ -504,32 +531,85 @@ otherwise it return t.
 If no section matches, this returns nil if no OPNAME was given
 and throws an error otherwise."
 
-(declare (indent 1))
-(let ((section (car head))
-      (info (cadr head))
-      (type (make-symbol "*type*"))
-      (context (make-symbol "*context*"))
-      (opname (caddr head)))
-  `(let* ((,section (monky-current-section))
-	  (,info (monky-section-info ,section))
-	  (,type (monky-section-type ,section))
-	  (,context (monky-section-context-type ,section)))
-     (cond ,@(mapcar (lambda (clause)
-		       (let ((prefix (car clause))
-			     (body (cdr clause)))
-			 `(,(if (eq prefix t)
-				`t
-			      `(monky-prefix-p ',(reverse prefix) ,context))
-			   (or (progn ,@body)
-			       t))))
-		     clauses)
-	   ,@(when opname
-	       `(((not ,type)
-		  (error "Nothing to %s here" ,opname))
-		 (t
-		  (error "Can't %s as %s"
-			 ,opname
-			 ,type))))))))
+  (declare (indent 1))
+  (let ((section (car head))
+	(info (cadr head))
+	(type (make-symbol "*type*"))
+	(context (make-symbol "*context*"))
+	(opname (caddr head)))
+    `(let* ((,section (monky-current-section))
+	    (,info (monky-section-info ,section))
+	    (,type (monky-section-type ,section))
+	    (,context (monky-section-context-type ,section)))
+       (cond ,@(mapcar (lambda (clause)
+			 (let ((prefix (car clause))
+			       (body (cdr clause)))
+			   `(,(if (eq prefix t)
+				  `t
+				`(monky-prefix-p ',(reverse prefix) ,context))
+			     (or (progn ,@body)
+				 t))))
+		       clauses)
+	     ,@(when opname
+		 `(((not ,type)
+		    (error "Nothing to %s here" ,opname))
+		   (t
+		    (error "Can't %s as %s"
+			   ,opname
+			   ,type))))))))
+
+
+;; refresh
+
+(defun monky-revert-buffers (dir &optional ignore-modtime)
+  (dolist (buffer (buffer-list))
+    (when (and buffer
+	       (buffer-file-name buffer)
+	       (file-readable-p (buffer-file-name buffer))
+	       (monky-string-starts-with-p (buffer-file-name buffer) dir)
+	       (or ignore-modtime (not (verify-visited-file-modtime buffer)))
+	       (not (buffer-modified-p buffer)))
+      (with-current-buffer buffer
+	(condition-case var
+	    (revert-buffer t t nil)
+	  (error (let ((signal-data (cadr var)))
+		   (cond (t (monky-bug-report signal-data))))))))))
+
+(defvar monky-refresh-needing-buffers nil)
+(defvar monky-refresh-pending nil)
+
+(defmacro monky-with-refresh (&rest body)
+  (declare (indent 0))
+  `(monky-refresh-wrapper (lambda () ,@body)))
+
+(defun monky-refresh-wrapper (func)
+  (if monky-refresh-pending
+      (funcall func)
+    (let* ((dir default-directory)
+	   (status-buffer (monky-find-buffer 'status dir))
+	   (monky-refresh-needing-buffers nil)
+	   (monky-refresh-pending t))
+      (unwind-protect
+	  (funcall func)
+	(when monky-refresh-needing-buffers
+	  (monky-revert-buffers dir)
+	  (dolist (b (adjoin status-buffer
+			     monky-refresh-needing-buffers))
+	    (monky-refresh-buffer b)))))))
+
+(defun monky-need-refresh (&optional buffer)
+  (let ((buffer (or buffer (current-buffer))))
+    (setq monky-refresh-needing-buffers
+	  (adjoin buffer monky-refresh-needing-buffers))))
+
+(defun monky-refresh ()
+  "Refresh current buffer to match repository state.
+Also revert every unmodified buffer visiting files
+in the corresponding directory."
+  (interactive)
+  (monky-with-refresh
+    (monky-need-refresh)))
+
 
 ;; monky mode
 
@@ -557,11 +637,15 @@ and throws an error otherwise."
 	(apply monky-refresh-function
 	       monky-refresh-args))))
 
-(defun monky-refresh ()
-  (interactive)
-  (error "Not implemented"))
-
 ;; utils
+
+(defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
+(defun monky-bug-report (str)
+  (message "Unknown error: %s\nPlease file a bug at %s"
+	   str monky-bug-report-url))
+
+(defun monky-string-starts-with-p (string prefix)
+  (eq (compare-strings string nil (length prefix) prefix nil nil) t))
 
 (defun monky-trim-line (str)
   (if (string= str "")
@@ -590,8 +674,6 @@ and throws an error otherwise."
     (if root
 	(concat root "/")
       (error "Not inside a hg repo"))))
-
-
 
 (defun monky-find-buffer (submode &optional dir)
   (let ((rootdir (or dir (monky-get-root-dir))))
@@ -626,7 +708,6 @@ and throws an error otherwise."
 (defun monky-insert-untracked-files ()
   (apply 'monky-hg-section
 	 '(untracked
-	   nil
 	   "Untracked files:"
 	   (lambda ()
 	     (monky-wash-sequence #'monky-wash-untracked-file))
@@ -781,9 +862,11 @@ and throws an error otherwise."
 
 (defun monky-insert-changes ()
   (let ((monky-hide-diffs t))
-    (monky-hg-section 'changes nil "Changes" 'monky-wash-statuses
+    (monky-hg-section 'changes "Changes" 'monky-wash-statuses
 		      "status" "--modified" "--added" "--removed")))
 
+
+;; actions
 (defun monky-visit-item (&optional other-window)
   "Visit current item.
 With a prefix argument, visit in other window."
@@ -829,6 +912,7 @@ With a prefix argument, visit in other window."
 	(suppress-keymap map t)
 	(define-key map (kbd "RET") 'monky-visit-item)
 	(define-key map (kbd "TAB") 'monky-toggle-section)
+	(define-key map (kbd "g") 'monky-refresh)
 	map))
 
 (setq default-directory "/home/ananth/monky/")
