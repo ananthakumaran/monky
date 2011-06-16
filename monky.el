@@ -374,7 +374,7 @@ BUFFER-TITLE is the inserted title of the section
 
 WASHER is a function that will be run after CMD.
 The buffer will be narrowed to the inserted text.
-It should add sectioning as needed for magit interaction
+It should add sectioning as needed for monky interaction
 
 CMD is an external command that will be run with ARGS as arguments"
   (let* ((body-beg nil)
@@ -690,7 +690,8 @@ in the corresponding directory."
   (monky-create-buffer-sections
     (monky-with-section 'status nil
       (monky-insert-untracked-files)
-      (monky-insert-changes))))
+      (monky-insert-changes)
+      (monky-insert-staged-changes))))
 
 
 ;; Untracked files
@@ -844,6 +845,7 @@ in the corresponding directory."
 
 (defun monky-wash-status ()
   (if (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$")
+      ;; TODO do we need the status here
       (let ((status (case (string-to-char (match-string-no-properties 1))
 		      (?M 'modified)
 		      (?A 'new)
@@ -854,16 +856,27 @@ in the corresponding directory."
 		      (t nil)))
 	    (file (match-string-no-properties 2))
 	    (monky-section-hidden-default monky-hide-diffs))
-	(monky-with-section file 'diff
-	  (delete-region (point) (+ (line-end-position) 1))
-	  (monky-insert-diff file))
+	(delete-region (point) (+ (line-end-position) 1))
+	(when (not (member file monky-staged-files))
+	  (monky-with-section file 'diff
+	    (monky-insert-diff file)))
 	t)
     nil))
 
 (defun monky-insert-changes ()
   (let ((monky-hide-diffs t))
-    (monky-hg-section 'changes "Changes" 'monky-wash-statuses
+    (monky-hg-section 'changes "Changes:" 'monky-wash-statuses
 		      "status" "--modified" "--added" "--removed")))
+
+;; Staged Changes
+(defun monky-insert-staged-changes ()
+  (when monky-staged-files
+    (monky-with-section 'staged nil
+      (insert (propertize "Staged changes:" 'face 'monky-section-title) "\n")
+      (let ((monky-section-hidden-default t))
+	(dolist (file monky-staged-files)
+	  (monky-with-section file 'diff
+	    (monky-insert-diff file)))))))
 
 
 ;; actions
@@ -884,8 +897,39 @@ With a prefix argument, visit in other window."
        (goto-char (point-min))
        (forward-line (1- line))))))
 
+;; stage
+(defun monky-stage-file (file)
+  (if (not (member file monky-staged-files))
+      (setq monky-staged-files (cons file monky-staged-files))))
+
+(defun monky-stage-item ()
+  "Add the item at point to the staging area."
+  (interactive)
+  (monky-section-action (item info "stage")
+    ((changes diff)
+     (monky-stage-file (monky-section-title item))
+     (monky-need-refresh))
+    ((staged diff)
+     (error "Already staged"))))
+
+;; unstage
+(defun monky-unstage-file (file)
+  (setq monky-staged-files (delete file monky-staged-files)))
+
+(defun monky-unstage-item ()
+  "Remove the item at point from the staging area."
+  (interactive)
+  (monky-section-action (item info "unstage")
+    ((staged diff)
+     (monky-unstage-file (monky-section-title item))
+     (monky-need-refresh))
+    ((changes diff)
+     (error "Already unstaged"))))
+
 (setq monky-status-mode-map
       (let ((map (make-keymap)))
+	(define-key map (kbd "s") 'monky-stage-item)
+	(define-key map (kbd "u") 'monky-unstage-item)
 	map))
 
 (define-minor-mode monky-status-mode
