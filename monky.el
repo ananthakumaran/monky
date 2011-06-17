@@ -21,6 +21,7 @@
 ;;; Commentary:
 
 ;; TODO
+;; check diff between set and setq
 ;; check the hg diff format
 ;; difference between removed and deleted file
 ;; add env HGPLAIN
@@ -248,6 +249,12 @@ Many Monky faces inherit from this one by default."
   "Face for selected options on monky's menu"
   :group 'monky-faces)
 
+;;; Compatibilities
+
+(if (functionp 'start-file-process)
+    (defalias 'monky-start-process 'start-file-process)
+  (defalias 'monky-start-process 'start-process))
+
 (defvar monky-top-section nil
   "The top section of the current buffer.")
 (make-variable-buffer-local 'monky-top-section)
@@ -256,6 +263,7 @@ Many Monky faces inherit from this one by default."
 (defvar monky-old-top-section nil)
 (defvar monky-section-hidden-default nil)
 
+(defvar monky-old-staged-files '())
 (defvar monky-staged-files '()
   "List of staged files")
 
@@ -503,9 +511,138 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
    (lambda (s)
      (monky-section-set-hidden s (not (monky-section-hidden s))))))
 
-(setq monky-process nil)
-(setq monky-process-buffer-name "*monky-process")
+;;; Running commands
 
+(defun monky-set-mode-line-process (str)
+  (let ((pr (if str (concat " " str) "")))
+    (save-excursion
+      (monky-for-all-buffers (lambda ()
+			       (setq mode-line-process pr))))))
+
+;; TODO check
+(defun monky-process-indicator-from-command (comps)
+  (if (monky-prefix-p (cons monky-hg-executable monky-hg-standard-options)
+		      comps)
+      (setq comps (nthcdr (+ (length monky-hg-standard-options) 1) comps)))
+  (cond ((or (null (cdr comps))
+	     (not (member (car comps) '("remote"))))
+	 (car comps))
+	(t
+	 (concat (car comps) " " (cadr comps)))))
+
+(defvar monky-process nil)
+(defvar monky-process-client-buffer nil)
+(defvar monky-process-buffer-name "*monky-process")
+
+(defun monky-run* (cmd-and-args
+		   &optional logline noerase noerror nowait input)
+  (if (and monky-process
+	   (get-buffer))
+      (error "Hg is already running"))
+  (let ((cmd (car cmd-and-args))
+	(args (cdr cmd-and-args))
+	(dir default-directory)
+	(buf (get-buffer-create monky-process-buffer-name)))
+    (monky-set-mode-line-process
+     (monky-process-indicator-from-command cmd-and-args))
+    (setq monky-process-client-buffer (current-buffer))
+    (with-current-buffer buf
+      (view-mode 1)
+      (set (make-local-variable 'view-no-disable-on-exit) t)
+      (setq view-exit-action
+	    (lambda (buffer)
+	      (with-current-buffer buffer
+		(bury-buffer))))
+      (setq buffer-read-only t)
+      (let ((inhibit-read-only t))
+	(setq default-directory dir)
+	(if noerase
+	    (goto-char (point-max))
+	  (erase-buffer))
+	(insert "$ " (or logline
+			 (monky-concat-with-delim " " cmd-and-args))
+		"\n")
+	(cond (nowait
+	       (setq monky-process
+		     (let ((process-connection-type nil))
+		       (apply 'monky-start-process cmd buf cmd args)))
+	       (set-process-sentinel monky-process 'monky-process-sentinel)
+	       (set-process-filter monky-process 'monky-process-filter)
+	       (when input
+		 (with-current-buffer input
+		   (process-send-region monky-process
+					(point-min) (point-max))
+		   (process-send-eof monky-process)
+		   (sit-for 0.1 t)))
+	       (setq successp t))
+	      (input
+	       (with-current-buffer input
+		 (setq default-directory dir)
+		 (setq monky-process
+		       ;; Don't use a pty, because it would set icrnl
+		       ;; which would modify the input (issue #20).
+		       (let ((process-connection-type nil))
+			 (apply 'monky-start-process cmd buf cmd args)))
+		 (set-process-filter monky-process 'monky-process-filter)
+		 (process-send-region monky-process
+				      (point-min) (point-max))
+		 (process-send-eof monky-process)
+		 (while (equal (process-status monky-process) 'run)
+		   (sit-for 0.1 t))
+		 (setq successp
+		       (equal (process-exit-status monky-process) 0))
+		 (setq monky-process nil))
+	       (monky-set-mode-line-process nil)
+	       (monky-need-refresh monky-process-client-buffer)
+	       )
+	      (t
+	       (setq successp
+		     (equal (apply 'process-file cmd nil buf nil args) 0))
+	       (monky-set-mode-line-process nil)
+	       (monky-need-refresh monky-process-client-buffer))))
+      (or successp
+	  noerror
+	  (error
+	   (or (save-excursion
+		 (set-buffer (get-buffer monky-process-buffer-name))
+		 (when (re-search-forward
+			(concat "^abort: \\(.*\\)" paragraph-separate) nil t)
+		   (match-string 1)))
+	       "Hg failed")))
+      successp)))
+
+(defun monky-process-sentinel (process event)
+  (let ((msg (format "Hg %s." (substring event 0 -1)))
+	(successp (string-match "^finished" event)))
+    (with-current-buffer (process-buffer process)
+      (let ((inhibit-read-only t))
+	(goto-char (point-max))
+	(insert msg "\n")
+	(message msg)))
+    (setq monky-process nil)
+    (monky-set-mode-line-process nil)
+    (monky-refresh-buffer monky-process-client-buffer)))
+
+;; TODO password?
+
+(defun monky-process-filter (proc string)
+  (save-current-buffer
+    (set-buffer (process-buffer proc))
+    (let ((inhibit-read-only t))
+      (goto-char (process-mark proc))
+      (insert string)
+      (set-marker (process-mark proc) (point)))))
+
+
+(defun monky-run-async-with-input (input cmd &rest args)
+  (monky-run* (cons cmd args) nil nil nil t input))
+
+(defun monky-display-process ()
+  "Display output from most recent git command."
+  (interactive)
+  (unless (get-buffer monky-process-buffer-name)
+    (error "No Hg commands have run"))
+  (display-buffer monky-process-buffer-name))
 ;; Actions
 
 (defmacro monky-section-action (head &rest clauses)
@@ -586,7 +723,7 @@ and throws an error otherwise."
   (if monky-refresh-pending
       (funcall func)
     (let* ((dir default-directory)
-	   (status-buffer (monky-find-buffer 'status dir))
+	   (status-buffer (monky-find-status-buffer dir))
 	   (monky-refresh-needing-buffers nil)
 	   (monky-refresh-pending t))
       (unwind-protect
@@ -654,6 +791,14 @@ in the corresponding directory."
 	(substring str 0 (- (length str) 1))
       str)))
 
+(defun monky-concat-with-delim (delim seqs)
+  (cond ((null seqs)
+	 nil)
+	((null (cdr seqs))
+	 (car seqs))
+	(t
+	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
+
 (defun monky-hg-shell (args)
   (apply #'process-file
 	 monky-hg-executable
@@ -685,6 +830,17 @@ in the corresponding directory."
 		      (eq monky-submode submode)
 		      )))
 	     (buffer-list))))
+
+(defun monky-find-status-buffer (&optional dir)
+  (monky-find-buffer 'status dir))
+
+(defun monky-for-all-buffers (func &optional dir)
+  (dolist (buf (buffer-list))
+    (with-current-buffer buf
+      (if (and (eq major-mode 'monky-mode)
+	       (or (null dir)
+		   (equal default-directory dir)))
+	  (funcall func)))))
 
 (defun monkey-refresh-status ()
   (monky-create-buffer-sections
@@ -857,7 +1013,8 @@ in the corresponding directory."
 	    (file (match-string-no-properties 2))
 	    (monky-section-hidden-default monky-hide-diffs))
 	(delete-region (point) (+ (line-end-position) 1))
-	(when (not (member file monky-staged-files))
+	(if (member file monky-old-staged-files)
+	    (monky-stage-file file)
 	  (monky-with-section file 'diff
 	    (monky-insert-diff file)))
 	t)
@@ -865,6 +1022,8 @@ in the corresponding directory."
 
 (defun monky-insert-changes ()
   (let ((monky-hide-diffs t))
+    (setq monky-old-staged-files (copy-list monky-staged-files))
+    (setq monky-staged-files '())
     (monky-hg-section 'changes "Changes:" 'monky-wash-statuses
 		      "status" "--modified" "--added" "--removed")))
 
@@ -930,6 +1089,7 @@ With a prefix argument, visit in other window."
       (let ((map (make-keymap)))
 	(define-key map (kbd "s") 'monky-stage-item)
 	(define-key map (kbd "u") 'monky-unstage-item)
+	(define-key map (kbd "c") 'monky-log-edit)
 	map))
 
 (define-minor-mode monky-status-mode
@@ -942,7 +1102,7 @@ With a prefix argument, visit in other window."
 (defun monky-status ()
   (interactive)
   (let* ((rootdir (monky-get-root-dir))
-	 (buf (or (monky-find-buffer 'status rootdir)
+	 (buf (or (monky-find-status-buffer rootdir)
 		  (generate-new-buffer
 		   (concat "*monky: "
 			   (file-name-nondirectory
@@ -951,12 +1111,60 @@ With a prefix argument, visit in other window."
     (monky-mode-init rootdir 'status #'monkey-refresh-status)
     (monky-status-mode t)))
 
+;;; Log edit mode
+
+(defvar monky-log-edit-buffer-name "*monky-edit-log*"
+  "Buffer name for composing commit messages.")
+
+(setq monky-log-edit-mode-map
+      (let ((map (make-sparse-keymap)))
+	(define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
+	map))
+
+(define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
+
+(defun monky-log-edit-commit ()
+  "Finish edit and commit."
+  (interactive)
+  (when (= (buffer-size) 0)
+    (error "No commit message"))
+  (let ((commit-buf (current-buffer)))
+    (with-current-buffer (monky-find-status-buffer default-directory)
+      (apply #'monky-run-async-with-input commit-buf
+	     monky-hg-executable
+	     (append monky-hg-standard-options
+		     (list "commit" "-l" "/dev/stdin")
+		     monky-staged-files))))
+  (erase-buffer)
+  (bury-buffer)
+  (when monky-pre-log-edit-window-configuration
+    (set-window-configuration monky-pre-log-edit-window-configuration)
+    (setq monky-pre-log-edit-window-configuration nil)))
+
+(defun monky-pop-to-log-edit (operation)
+  (let ((dir default-directory)
+	(buf (get-buffer-create monky-log-edit-buffer-name)))
+    (setq monky-pre-log-edit-window-configuration
+	  (current-window-configuration))
+    (pop-to-buffer buf)
+    (setq default-directory dir)
+    (monky-log-edit-mode)
+    (message "Type C-c C-c to %s (C-c C-k to cancel)." operation)))
+
+(defun monky-log-edit ()
+  "Brings up a buffer to allow editing of commit messages."
+  (interactive)
+  (if (not monky-staged-files)
+      (error "Nothing staged.")
+    (monky-pop-to-log-edit "commit")))
+
 (setq monky-mode-map
       (let ((map (make-keymap)))
 	(suppress-keymap map t)
 	(define-key map (kbd "RET") 'monky-visit-item)
 	(define-key map (kbd "TAB") 'monky-toggle-section)
 	(define-key map (kbd "g") 'monky-refresh)
+	(define-key map (kbd "$") 'monky-display-process)
 	map))
 
 (setq default-directory "/home/ananth/monky/")
