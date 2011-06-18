@@ -251,9 +251,10 @@ Many Monky faces inherit from this one by default."
 
 ;;; Compatibilities
 
-(if (functionp 'start-file-process)
-    (defalias 'monky-start-process 'start-file-process)
-  (defalias 'monky-start-process 'start-process))
+(defalias 'monky-start-process
+  (if (functionp 'start-file-process)
+      'start-file-process
+    'start-process))
 
 (defvar monky-top-section nil
   "The top section of the current buffer.")
@@ -634,6 +635,12 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (set-marker (process-mark proc) (point)))))
 
 
+(defun monky-run-hg (&rest args)
+  (monky-with-refresh
+    (monky-run* (append (cons monky-hg-executable
+			      monky-hg-standard-options)
+			args))))
+
 (defun monky-run-async-with-input (input cmd &rest args)
   (monky-run* (cons cmd args) nil nil nil t input))
 
@@ -791,6 +798,10 @@ in the corresponding directory."
 	(substring str 0 (- (length str) 1))
       str)))
 
+(defun monky-put-line-property (prop val)
+  (put-text-property (line-beginning-position) (line-beginning-position 2)
+		     prop val))
+
 (defun monky-concat-with-delim (delim seqs)
   (cond ((null seqs)
 	 nil)
@@ -846,33 +857,49 @@ in the corresponding directory."
   (monky-create-buffer-sections
     (monky-with-section 'status nil
       (monky-insert-untracked-files)
+      (monky-insert-missing-files)
       (monky-insert-changes)
       (monky-insert-staged-changes))))
 
 
+
+(defmacro monky-with-wash-status (status file &rest body)
+  (declare (indent 2))
+  `(lambda ()
+     (if (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$")
+	 (let ((,status (case (string-to-char (match-string-no-properties 1))
+			  (?M 'modified)
+			  (?A 'new)
+			  (?R 'removed)
+			  (?C 'clean)
+			  (?! 'missing)
+			  (?? 'untracked)
+			  (?I 'ignored)
+			  (t nil)))
+	       (,file (match-string-no-properties 2)))
+	   (delete-region (point) (+ (line-end-position) 1))
+	   ,@body
+	   t)
+       nil)))
+
 ;; Untracked files
 
-(defun monky-wash-untracked-file ()
-  (if (looking-at "^? \\(.*\\)$")
-      (let ((file (match-string-no-properties 1)))
-	(delete-region (point) (+ (line-end-position) 1))
-	(monky-with-section file 'file
-	  (monky-set-section-info file)
-	  (insert "\t" file "\n"))
-	t)
-    nil))
+(defun monky-wash-files ()
+  (monky-wash-sequence
+   (monky-with-wash-status status file
+     (monky-with-section file 'file
+       (monky-set-section-info file)
+       (insert "\t" file "\n")))))
 
 (defun monky-insert-untracked-files ()
-  (apply 'monky-hg-section
-	 '(untracked
-	   "Untracked files:"
-	   (lambda ()
-	     (monky-wash-sequence #'monky-wash-untracked-file))
-	   "status" "-u")))
+  (monky-hg-section 'untracked "Untracked files" #'monky-wash-files
+		    "status" "--unknown"))
 
-(defun monky-put-line-property (prop val)
-  (put-text-property (line-beginning-position) (line-beginning-position 2)
-		     prop val))
+(defun monky-insert-missing-files ()
+  (monky-hg-section 'missing "Missing files" #'monky-wash-files
+		    "status" "--deleted"))
+
+
 ;; Hunk
 (defun monky-hunk-item-diff (hunk)
   (let ((diff (monky-section-parent hunk)))
@@ -996,35 +1023,21 @@ in the corresponding directory."
 
 (defvar monky-hide-diffs nil)
 
-(defun monky-wash-statuses ()
-  (monky-wash-sequence #'monky-wash-status))
+(defun monky-wash-changes ()
+  (monky-wash-sequence
+   (monky-with-wash-status status file
+     (let ((monky-section-hidden-default monky-hide-diffs))
+       (if (member file monky-old-staged-files)
+	   (monky-stage-file file)
+	 (monky-with-section file 'diff
+	   (monky-insert-diff file)))))))
 
-(defun monky-wash-status ()
-  (if (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$")
-      ;; TODO do we need the status here
-      (let ((status (case (string-to-char (match-string-no-properties 1))
-		      (?M 'modified)
-		      (?A 'new)
-		      (?R 'removed)
-		      (?! 'deleted)
-		      (?C 'clean)
-		      (?I 'ignored)
-		      (t nil)))
-	    (file (match-string-no-properties 2))
-	    (monky-section-hidden-default monky-hide-diffs))
-	(delete-region (point) (+ (line-end-position) 1))
-	(if (member file monky-old-staged-files)
-	    (monky-stage-file file)
-	  (monky-with-section file 'diff
-	    (monky-insert-diff file)))
-	t)
-    nil))
 
 (defun monky-insert-changes ()
   (let ((monky-hide-diffs t))
     (setq monky-old-staged-files (copy-list monky-staged-files))
     (setq monky-staged-files '())
-    (monky-hg-section 'changes "Changes:" 'monky-wash-statuses
+    (monky-hg-section 'changes "Changes:" #'monky-wash-changes
 		      "status" "--modified" "--added" "--removed")))
 
 ;; Staged Changes
@@ -1044,7 +1057,7 @@ in the corresponding directory."
 With a prefix argument, visit in other window."
   (interactive (list current-prefix-arg))
   (monky-section-action (item info "visit")
-    ((untracked file)
+    ((file)
      (funcall (if other-window 'find-file-other-window 'find-file)
 	      info))
     ((diff)
@@ -1065,6 +1078,10 @@ With a prefix argument, visit in other window."
   "Add the item at point to the staging area."
   (interactive)
   (monky-section-action (item info "stage")
+    ((untracked file)
+     (monky-run-hg "add" info))
+    ((missing file)
+     (monky-run-hg "remove" info))
     ((changes diff)
      (monky-stage-file (monky-section-title item))
      (monky-need-refresh))
