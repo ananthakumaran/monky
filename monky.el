@@ -24,6 +24,7 @@
 ;; check diff between set and setq
 ;; check the hg diff format
 ;; difference between removed and deleted file
+;; check how hg handling file rename
 ;; add env HGPLAIN
 ;;; Code:
 
@@ -255,6 +256,10 @@ Many Monky faces inherit from this one by default."
   (if (functionp 'start-file-process)
       'start-file-process
     'start-process))
+
+(eval-when-compile
+  (when (< emacs-major-version 23)
+    (defvar line-move-visual nil)))
 
 (defvar monky-top-section nil
   "The top section of the current buffer.")
@@ -488,7 +493,8 @@ FUNC should leave point at the end of the modified region"
 		 (forward-line)
 		 (point)))
 	  (end (monky-section-end section)))
-      (put-text-property beg end 'invisible hidden))
+      (if (< beg end)
+          (put-text-property beg end 'invisible hidden)))
     (if (not hidden)
 	(dolist (c (monky-section-children section))
 	  (monky-section-set-hidden c (monky-section-hidden c))))))
@@ -754,6 +760,41 @@ in the corresponding directory."
   (monky-with-refresh
     (monky-need-refresh)))
 
+(defvar last-point)
+
+(defun monky-remember-point ()
+  (setq last-point (point)))
+
+(defun monky-invisible-region-end (pos)
+  (while (and (not (= pos (point-max))) (invisible-p pos))
+    (setq pos (next-char-property-change pos)))
+  pos)
+
+(defun monky-invisible-region-start (pos)
+  (while (and (not (= pos (point-min))) (invisible-p pos))
+    (setq pos (1- (previous-char-property-change pos))))
+  pos)
+
+(defun monky-correct-point-after-command ()
+  "Move point outside of invisible regions.
+
+Emacs often leaves point in invisible regions, it seems.  To fix
+this, we move point ourselves and never let Emacs do its own
+adjustments.
+
+When point has to be moved out of an invisible region, it can be
+moved to its end or its beginning.  We usually move it to its
+end, except when that would move point back to where it was
+before the last command."
+  (if (invisible-p (point))
+      (let ((end (monky-invisible-region-end (point))))
+	(goto-char (if (= end last-point)
+		       (monky-invisible-region-start (point))
+		     end))))
+  (setq disable-point-adjustment t))
+
+(defun monky-post-command-hook ()
+  (monky-correct-point-after-command))
 
 ;; monky mode
 
@@ -761,10 +802,14 @@ in the corresponding directory."
   (kill-all-local-variables)
   (buffer-disable-undo)
   (setq buffer-read-only t)
+  (make-local-variable 'line-move-visual)
   (setq major-mode 'monky-mode
 	mode-name "Monky"
 	mode-line-process ""
-	truncate-lines t)
+	truncate-lines t
+	line-move-visual nil)
+  (add-hook 'pre-command-hook #'monky-remember-point nil t)
+  (add-hook 'post-command-hook #'monky-post-command-hook t t)
   (use-local-map monky-mode-map))
 
 (defun monky-mode-init (dir submode refresh-func &rest refresh-args)
@@ -810,7 +855,7 @@ in the corresponding directory."
 	(t
 	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
 
-(defun monky-hg-shell (args)
+(defun monky-hg-insert (args)
   (apply #'process-file
 	 monky-hg-executable
 	 nil (list t nil) nil
@@ -819,7 +864,7 @@ in the corresponding directory."
 (defun monky-hg-output (args)
   (with-output-to-string
     (with-current-buffer standard-output
-      (monky-hg-shell args))))
+      (monky-hg-insert args))))
 
 (defun monky-hg-string (&rest args)
   (monky-trim-line (monky-hg-output args)))
@@ -981,13 +1026,13 @@ in the corresponding directory."
 			   (search-forward-regexp "^deleted" end t))
 			 'deleted)
 			((save-excursion
-			   (search-forward-regexp "^rename" end t))
+			   (search-forward-regexp "^copy" end t))
 			 'renamed)
 			(t
 			 'modified)))
 	       (file2 (cond
 		       ((save-excursion
-			  (search-forward-regexp "^rename from \\(.*\\)"
+			  (search-forward-regexp "^copy from \\(.*\\)"
 						 end t))
 			(match-string-no-properties 1)))))
 	  (monky-set-section-info (list status file file2))
@@ -1000,7 +1045,7 @@ in the corresponding directory."
 ;; TODO cleanup
 (defun monky-insert-diff (file)
   (let ((p (point)))
-    (monky-hg-shell (list "diff" "--git" file))
+    (monky-hg-insert (list "diff" "--git" file))
     (if (not (eq (char-before) ?\n))
 	(insert "\n"))
     (save-restriction
@@ -1014,7 +1059,7 @@ in the corresponding directory."
 		       (modified (format "Modified %s" file))
 		       (new (format "New      %s" file))
 		       (deleted (format "Deleted  %s" file))
-		       (renamed (format "Renamed %s (from %s"
+		       (renamed (format "Renamed %s (from %s)"
 					file file2))
 		       (t (format "?        %s" file)))))
     (insert "\t" status-text "\n")))
