@@ -261,6 +261,77 @@ Many Monky faces inherit from this one by default."
   (when (< emacs-major-version 23)
     (defvar line-move-visual nil)))
 
+;;; Utilities
+
+(defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
+(defun monky-bug-report (str)
+  (message "Unknown error: %s\nPlease file a bug at %s"
+	   str monky-bug-report-url))
+
+(defun monky-string-starts-with-p (string prefix)
+  (eq (compare-strings string nil (length prefix) prefix nil nil) t))
+
+(defun monky-trim-line (str)
+  (if (string= str "")
+      nil
+    (if (equal (elt str (- (length str) 1)) ?\n)
+	(substring str 0 (- (length str) 1))
+      str)))
+
+(defun monky-put-line-property (prop val)
+  (put-text-property (line-beginning-position) (line-beginning-position 2)
+		     prop val))
+
+(defun monky-concat-with-delim (delim seqs)
+  (cond ((null seqs)
+	 nil)
+	((null (cdr seqs))
+	 (car seqs))
+	(t
+	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
+
+(defun monky-prefix-p (prefix list)
+  "Returns non-nil if PREFIX is a prefix of LIST.  PREFIX and LIST should both be
+lists.
+
+If the car of PREFIX is the symbol '*, then return non-nil if the cdr of PREFIX
+is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
+  (or (null prefix)
+      (if (eq (car prefix) '*)
+	  (or (monky-prefix-p (cdr prefix) list)
+	      (and (not (null list))
+		   (monky-prefix-p prefix (cdr list))))
+	(and (not (null list))
+	     (equal (car prefix) (car list))
+	     (monky-prefix-p (cdr prefix) (cdr list))))))
+
+(defun monky-wash-sequence (func)
+  "Run FUNC until end of buffer is reached
+
+FUNC should leave point at the end of the modified region"
+  (while (and (not (eobp))
+	      (funcall func))))
+
+;;; Key bindings
+
+(setq monky-mode-map
+      (let ((map (make-keymap)))
+	(suppress-keymap map t)
+	(define-key map (kbd "RET") 'monky-visit-item)
+	(define-key map (kbd "TAB") 'monky-toggle-section)
+	(define-key map (kbd "g") 'monky-refresh)
+	(define-key map (kbd "$") 'monky-display-process)
+	map))
+
+(setq monky-status-mode-map
+      (let ((map (make-keymap)))
+	(define-key map (kbd "s") 'monky-stage-item)
+	(define-key map (kbd "u") 'monky-unstage-item)
+	(define-key map (kbd "c") 'monky-log-edit)
+	map))
+
+;;; Sections
+
 (defvar monky-top-section nil
   "The top section of the current buffer.")
 (make-variable-buffer-local 'monky-top-section)
@@ -268,15 +339,6 @@ Many Monky faces inherit from this one by default."
 
 (defvar monky-old-top-section nil)
 (defvar monky-section-hidden-default nil)
-
-(defvar monky-old-staged-files '())
-(defvar monky-staged-files '()
-  "List of staged files")
-
-(make-variable-buffer-local 'monky-staged-files)
-(put 'monky-staged-files 'permanent-local t)
-
-;;; Sections
 
 ;; A buffer in monky-mode is organized into hierarchical sections.
 ;; These sections are used for navigation and for hiding parts of the
@@ -425,8 +487,6 @@ CMD is an external command that will be run with ARGS as arguments"
 	      (delq section (monky-section-children parent)))
       (setq monky-top-section nil))))
 
-
-
 (defun monky-current-section ()
   "Return the monky section at point."
   (or (get-text-property (point) 'monky-section)
@@ -443,22 +503,6 @@ CMD is an external command that will be run with ARGS as arguments"
 		   (monky-section-parent section)))
 	'()))))
 
-(defun monky-prefix-p (prefix list)
-  "Returns non-nil if PREFIX is a prefix of LIST.  PREFIX and LIST should both be
-lists.
-
-If the car of PREFIX is the symbol '*, then return non-nil if the cdr of PREFIX
-is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
-  (or (null prefix)
-      (if (eq (car prefix) '*)
-	  (or (monky-prefix-p (cdr prefix) list)
-	      (and (not (null list))
-		   (monky-prefix-p prefix (cdr list))))
-	(and (not (null list))
-	     (equal (car prefix) (car list))
-	     (monky-prefix-p (cdr prefix) (cdr list))))))
-
-
 (defun monky-hg-section (section-title-and-type buffer-title washer &rest args)
   (apply #'monky-insert-section
 	 section-title-and-type
@@ -466,15 +510,6 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 	 washer
 	 monky-hg-executable
 	 (append monky-hg-standard-options args)))
-
-(defun monky-wash-sequence (func)
-  "Run FUNC until end of buffer is reached
-
-FUNC should leave point at the end of the modified region"
-  (while (and (not (eobp))
-	      (funcall func))))
-
-;; View selection
 
 (defun monky-set-section-needs-refresh-on-show (flag &optional section)
   (setf (monky-section-needs-refresh-on-show
@@ -544,12 +579,13 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 (defun monky-run* (cmd-and-args
 		   &optional logline noerase noerror nowait input)
   (if (and monky-process
-	   (get-buffer))
+	   (get-buffer monky-process-buffer-name))
       (error "Hg is already running"))
   (let ((cmd (car cmd-and-args))
 	(args (cdr cmd-and-args))
 	(dir default-directory)
-	(buf (get-buffer-create monky-process-buffer-name)))
+	(buf (get-buffer-create monky-process-buffer-name))
+	(successp nil))
     (monky-set-mode-line-process
      (monky-process-indicator-from-command cmd-and-args))
     (setq monky-process-client-buffer (current-buffer))
@@ -610,8 +646,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (or successp
 	  noerror
 	  (error
-	   (or (save-excursion
-		 (set-buffer (get-buffer monky-process-buffer-name))
+	   (or (with-current-buffer (get-buffer monky-process-buffer-name)
 		 (when (re-search-forward
 			(concat "^abort: \\(.*\\)" paragraph-separate) nil t)
 		   (match-string 1)))
@@ -656,7 +691,8 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
   (unless (get-buffer monky-process-buffer-name)
     (error "No Hg commands have run"))
   (display-buffer monky-process-buffer-name))
-;; Actions
+
+;;; Actions
 
 (defmacro monky-section-action (head &rest clauses)
   (declare (indent 1))
@@ -708,8 +744,48 @@ and throws an error otherwise."
 			   ,opname
 			   ,type))))))))
 
+(defun monky-visit-item (&optional other-window)
+  "Visit current item.
+With a prefix argument, visit in other window."
+  (interactive (list current-prefix-arg))
+  (monky-section-action (item info "visit")
+    ((file)
+     (funcall (if other-window 'find-file-other-window 'find-file)
+	      info))
+    ((diff)
+     (find-file (monky-diff-item-file item)))
+    ((hunk)
+     (let ((file (monky-diff-item-file (monky-hunk-item-diff item)))
+	   (line (monky-hunk-item-target-line item)))
+       (find-file file)
+       (goto-char (point-min))
+       (forward-line (1- line))))))
 
-;; refresh
+(defun monky-stage-item ()
+  "Add the item at point to the staging area."
+  (interactive)
+  (monky-section-action (item info "stage")
+    ((untracked file)
+     (monky-run-hg "add" info))
+    ((missing file)
+     (monky-run-hg "remove" info))
+    ((changes diff)
+     (monky-stage-file (monky-section-title item))
+     (monky-need-refresh))
+    ((staged diff)
+     (error "Already staged"))))
+
+(defun monky-unstage-item ()
+  "Remove the item at point from the staging area."
+  (interactive)
+  (monky-section-action (item info "unstage")
+    ((staged diff)
+     (monky-unstage-file (monky-section-title item))
+     (monky-need-refresh))
+    ((changes diff)
+     (error "Already unstaged"))))
+
+;;; Refresh
 
 (defun monky-revert-buffers (dir &optional ignore-modtime)
   (dolist (buffer (buffer-list))
@@ -760,6 +836,12 @@ in the corresponding directory."
   (monky-with-refresh
     (monky-need-refresh)))
 
+(defun monky-refresh-buffer (&optional buffer)
+  (with-current-buffer (or buffer (current-buffer))
+    (if monky-refresh-function
+	(apply monky-refresh-function
+	       monky-refresh-args))))
+
 (defvar last-point)
 
 (defun monky-remember-point ()
@@ -796,7 +878,7 @@ before the last command."
 (defun monky-post-command-hook ()
   (monky-correct-point-after-command))
 
-;; monky mode
+;;; Monky mode
 
 (defun monky-mode ()
   (kill-all-local-variables)
@@ -820,40 +902,8 @@ before the last command."
   (monky-mode)
   (monky-refresh-buffer))
 
-(defun monky-refresh-buffer (&optional buffer)
-  (with-current-buffer (or buffer (current-buffer))
-    (if monky-refresh-function
-	(apply monky-refresh-function
-	       monky-refresh-args))))
 
-;; utils
-
-(defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
-(defun monky-bug-report (str)
-  (message "Unknown error: %s\nPlease file a bug at %s"
-	   str monky-bug-report-url))
-
-(defun monky-string-starts-with-p (string prefix)
-  (eq (compare-strings string nil (length prefix) prefix nil nil) t))
-
-(defun monky-trim-line (str)
-  (if (string= str "")
-      nil
-    (if (equal (elt str (- (length str) 1)) ?\n)
-	(substring str 0 (- (length str) 1))
-      str)))
-
-(defun monky-put-line-property (prop val)
-  (put-text-property (line-beginning-position) (line-beginning-position 2)
-		     prop val))
-
-(defun monky-concat-with-delim (delim seqs)
-  (cond ((null seqs)
-	 nil)
-	((null (cdr seqs))
-	 (car seqs))
-	(t
-	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
+;;; Hg utils
 
 (defun monky-hg-insert (args)
   (apply #'process-file
@@ -883,8 +933,7 @@ before the last command."
 		 (and default-directory
 		      (equal (expand-file-name default-directory) rootdir)
 		      (eq major-mode 'monky-mode)
-		      (eq monky-submode submode)
-		      )))
+		      (eq monky-submode submode))))
 	     (buffer-list))))
 
 (defun monky-find-status-buffer (&optional dir)
@@ -898,15 +947,8 @@ before the last command."
 		   (equal default-directory dir)))
 	  (funcall func)))))
 
-(defun monkey-refresh-status ()
-  (monky-create-buffer-sections
-    (monky-with-section 'status nil
-      (monky-insert-untracked-files)
-      (monky-insert-missing-files)
-      (monky-insert-changes)
-      (monky-insert-staged-changes))))
 
-
+;;; Washers
 
 (defmacro monky-with-wash-status (status file &rest body)
   (declare (indent 2))
@@ -927,7 +969,7 @@ before the last command."
 	   t)
        nil)))
 
-;; Untracked files
+;; File
 
 (defun monky-wash-files ()
   (monky-wash-sequence
@@ -936,16 +978,8 @@ before the last command."
        (monky-set-section-info file)
        (insert "\t" file "\n")))))
 
-(defun monky-insert-untracked-files ()
-  (monky-hg-section 'untracked "Untracked files" #'monky-wash-files
-		    "status" "--unknown"))
-
-(defun monky-insert-missing-files ()
-  (monky-hg-section 'missing "Missing files" #'monky-wash-files
-		    "status" "--deleted"))
-
-
 ;; Hunk
+
 (defun monky-hunk-item-diff (hunk)
   (let ((diff (monky-section-parent hunk)))
     (or (eq (monky-section-type diff) 'diff)
@@ -992,6 +1026,8 @@ before the last command."
     nil))
 
 ;; Diff
+
+(defvar monky-hide-diffs nil)
 
 (defun monky-diff-item-kind (diff)
   (car (monky-section-info diff)))
@@ -1064,9 +1100,19 @@ before the last command."
 		       (t (format "?        %s" file)))))
     (insert "\t" status-text "\n")))
 
-;; Changes
+;;; Untracked files
 
-(defvar monky-hide-diffs nil)
+(defun monky-insert-untracked-files ()
+  (monky-hg-section 'untracked "Untracked files" #'monky-wash-files
+		    "status" "--unknown"))
+
+;;; Missing files
+
+(defun monky-insert-missing-files ()
+  (monky-hg-section 'missing "Missing files" #'monky-wash-files
+		    "status" "--deleted"))
+
+;;; Changes
 
 (defun monky-wash-changes ()
   (monky-wash-sequence
@@ -1086,6 +1132,21 @@ before the last command."
 		      "status" "--modified" "--added" "--removed")))
 
 ;; Staged Changes
+
+(defvar monky-old-staged-files '())
+(defvar monky-staged-files '()
+  "List of staged files")
+
+(make-variable-buffer-local 'monky-staged-files)
+(put 'monky-staged-files 'permanent-local t)
+
+(defun monky-stage-file (file)
+  (if (not (member file monky-staged-files))
+      (setq monky-staged-files (cons file monky-staged-files))))
+
+(defun monky-unstage-file (file)
+  (setq monky-staged-files (delete file monky-staged-files)))
+
 (defun monky-insert-staged-changes ()
   (when monky-staged-files
     (monky-with-section 'staged nil
@@ -1096,63 +1157,15 @@ before the last command."
 	    (monky-insert-diff file)))))))
 
 
-;; actions
-(defun monky-visit-item (&optional other-window)
-  "Visit current item.
-With a prefix argument, visit in other window."
-  (interactive (list current-prefix-arg))
-  (monky-section-action (item info "visit")
-    ((file)
-     (funcall (if other-window 'find-file-other-window 'find-file)
-	      info))
-    ((diff)
-     (find-file (monky-diff-item-file item)))
-    ((hunk)
-     (let ((file (monky-diff-item-file (monky-hunk-item-diff item)))
-	   (line (monky-hunk-item-target-line item)))
-       (find-file file)
-       (goto-char (point-min))
-       (forward-line (1- line))))))
+;;; Status mode
 
-;; stage
-(defun monky-stage-file (file)
-  (if (not (member file monky-staged-files))
-      (setq monky-staged-files (cons file monky-staged-files))))
-
-(defun monky-stage-item ()
-  "Add the item at point to the staging area."
-  (interactive)
-  (monky-section-action (item info "stage")
-    ((untracked file)
-     (monky-run-hg "add" info))
-    ((missing file)
-     (monky-run-hg "remove" info))
-    ((changes diff)
-     (monky-stage-file (monky-section-title item))
-     (monky-need-refresh))
-    ((staged diff)
-     (error "Already staged"))))
-
-;; unstage
-(defun monky-unstage-file (file)
-  (setq monky-staged-files (delete file monky-staged-files)))
-
-(defun monky-unstage-item ()
-  "Remove the item at point from the staging area."
-  (interactive)
-  (monky-section-action (item info "unstage")
-    ((staged diff)
-     (monky-unstage-file (monky-section-title item))
-     (monky-need-refresh))
-    ((changes diff)
-     (error "Already unstaged"))))
-
-(setq monky-status-mode-map
-      (let ((map (make-keymap)))
-	(define-key map (kbd "s") 'monky-stage-item)
-	(define-key map (kbd "u") 'monky-unstage-item)
-	(define-key map (kbd "c") 'monky-log-edit)
-	map))
+(defun monkey-refresh-status ()
+  (monky-create-buffer-sections
+    (monky-with-section 'status nil
+      (monky-insert-untracked-files)
+      (monky-insert-missing-files)
+      (monky-insert-changes)
+      (monky-insert-staged-changes))))
 
 (define-minor-mode monky-status-mode
   "Minor mode for hg status."
@@ -1174,6 +1187,8 @@ With a prefix argument, visit in other window."
     (monky-status-mode t)))
 
 ;;; Log edit mode
+
+(defvar monky-pre-log-edit-window-configuration nil)
 
 (defvar monky-log-edit-buffer-name "*monky-edit-log*"
   "Buffer name for composing commit messages.")
@@ -1219,14 +1234,5 @@ With a prefix argument, visit in other window."
   (if (not monky-staged-files)
       (error "Nothing staged.")
     (monky-pop-to-log-edit "commit")))
-
-(setq monky-mode-map
-      (let ((map (make-keymap)))
-	(suppress-keymap map t)
-	(define-key map (kbd "RET") 'monky-visit-item)
-	(define-key map (kbd "TAB") 'monky-toggle-section)
-	(define-key map (kbd "g") 'monky-refresh)
-	(define-key map (kbd "$") 'monky-display-process)
-	map))
 
 (setq default-directory "/home/ananth/monky/")
