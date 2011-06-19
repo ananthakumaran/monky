@@ -26,6 +26,7 @@
 ;; difference between removed and deleted file
 ;; check how hg handling file rename
 ;; add env HGPLAIN
+;; check defcustom
 ;;; Code:
 
 (defgroup monky nil
@@ -58,6 +59,13 @@ save all modified buffers without asking."
   "Require acknowledgment before reverting an item."
   :group 'monky
   :type 'boolean)
+
+(defcustom monky-process-popup-time -1
+  "Popup the process buffer if a command takes longer than this many seconds."
+  :group 'monky
+  :type '(choice (const :tag "Never" -1)
+		 (const :tag "Immediately" 0)
+		 (integer :tag "After this many seconds")))
 
 
 (defgroup monky-faces nil
@@ -321,6 +329,7 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "TAB") 'monky-toggle-section)
 	(define-key map (kbd "g") 'monky-refresh)
 	(define-key map (kbd "$") 'monky-display-process)
+	(define-key map (kbd ":") 'monky-hg-command)
 	map))
 
 (setq monky-status-mode-map
@@ -617,6 +626,18 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 					(point-min) (point-max))
 		   (process-send-eof monky-process)
 		   (sit-for 0.1 t)))
+	       (cond ((= monky-process-popup-time 0)
+		      (pop-to-buffer (process-buffer monky-process)))
+		     ((> monky-process-popup-time 0)
+		      (run-with-timer
+		       monky-process-popup-time nil
+		       (function
+			(lambda (buf)
+			  (with-current-buffer buf
+			    (when monky-process
+			      (display-buffer (process-buffer monky-process))
+			      (goto-char (point-max))))))
+		       (current-buffer))))
 	       (setq successp t))
 	      (input
 	       (with-current-buffer input
@@ -691,6 +712,20 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
   (unless (get-buffer monky-process-buffer-name)
     (error "No Hg commands have run"))
   (display-buffer monky-process-buffer-name))
+
+(defun monky-hg-command (command)
+  "Perform arbitrary Hg COMMAND."
+  (interactive "sRun hg like this: ")
+  (require 'pcomplete)
+  (let ((args (car (with-temp-buffer
+		     (insert command)
+		     (pcomplete-parse-buffer-arguments))))
+	(monky-process-popup-time 0))
+    (monky-with-refresh
+      (monky-run* (append (cons monky-hg-executable
+				monky-hg-standard-options)
+			  args)
+		  nil nil nil t))))
 
 ;;; Actions
 
