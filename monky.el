@@ -20,13 +20,6 @@
 
 ;;; Commentary:
 
-;; TODO
-;; check diff between set and setq
-;; check the hg diff format
-;; difference between removed and deleted file
-;; check how hg handling file rename
-;; add env HGPLAIN
-;; check defcustom
 ;;; Code:
 
 (defgroup monky nil
@@ -592,7 +585,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 
 (defvar monky-process nil)
 (defvar monky-process-client-buffer nil)
-(defvar monky-process-buffer-name "*monky-process")
+(defvar monky-process-buffer-name "*monky-process*")
 
 (defun monky-run* (cmd-and-args
 		   &optional logline noerase noerror nowait input)
@@ -1254,7 +1247,7 @@ before the last command."
   "Minor mode for hg status."
   :group monky
   :init-value ()
-  :lighter "status"
+  :lighter ()
   :keymap monky-status-mode-map)
 
 (defun monky-status ()
