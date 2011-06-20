@@ -344,6 +344,7 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "s") 'monky-stage-item)
 	(define-key map (kbd "S") 'monky-stage-all)
 	(define-key map (kbd "u") 'monky-unstage-item)
+	(define-key map (kbd "U") 'monky-unstage-all)
 	(define-key map (kbd "c") 'monky-log-edit)
 	map))
 
@@ -817,13 +818,24 @@ With a prefix argument, visit in other window."
   (monky-section-action (item info "stage")
     ((untracked file)
      (monky-run-hg "add" info))
+    ((untracked)
+     (monky-run-hg "add"))
     ((missing file)
      (monky-run-hg "remove" info))
     ((changes diff)
      (monky-stage-file (monky-section-title item))
      (monky-need-refresh))
+    ((changes)
+     (monky-stage-all))
     ((staged diff)
      (error "Already staged"))))
+
+(defun monky-unstage-all ()
+  "Remove all items from the staging area"
+  (interactive)
+  (monky-with-refresh
+    (setq monky-staged-files '())
+    (monky-need-refresh)))
 
 (defun monky-unstage-item ()
   "Remove the item at point from the staging area."
@@ -832,6 +844,8 @@ With a prefix argument, visit in other window."
     ((staged diff)
      (monky-unstage-file (monky-section-title item))
      (monky-need-refresh))
+    ((staged)
+     (monky-unstage-all))
     ((changes diff)
      (error "Already unstaged"))))
 
