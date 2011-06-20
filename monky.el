@@ -320,6 +320,13 @@ FUNC should leave point at the end of the modified region"
   (while (and (not (eobp))
 	      (funcall func))))
 
+(defun monky-goto-line (line)
+  "Like `goto-line' but doesn't set the mark."
+  (save-restriction
+    (widen)
+    (goto-char 1)
+    (forward-line (1- line))))
+
 ;;; Key bindings
 
 (setq monky-mode-map
@@ -873,9 +880,25 @@ in the corresponding directory."
 
 (defun monky-refresh-buffer (&optional buffer)
   (with-current-buffer (or buffer (current-buffer))
-    (if monky-refresh-function
-	(apply monky-refresh-function
-	       monky-refresh-args))))
+    (let* ((old-line (line-number-at-pos))
+	   (old-section (monky-current-section))
+	   (old-path (and old-section
+			  (monky-section-path old-section)))
+	   (section-line (and old-section
+			      (count-lines
+			       (monky-section-beginning old-section)
+			       (point)))))
+      (if monky-refresh-function
+	  (apply monky-refresh-function
+		 monky-refresh-args))
+      (let ((s (and old-path (monky-find-section old-path monky-top-section))))
+	(cond (s
+	       (goto-char (monky-section-beginning s))
+	       (forward-line section-line))
+	      (t
+	       (monky-goto-line old-line)))
+	(dolist (w (get-buffer-window-list (current-buffer)))
+	  (set-window-point w (point)))))))
 
 (defvar last-point)
 
@@ -1270,4 +1293,4 @@ before the last command."
       (error "Nothing staged.")
     (monky-pop-to-log-edit "commit")))
 
-(setq default-directory "/home/ananth/monky/")
+(provide 'monky)
