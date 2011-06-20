@@ -342,6 +342,7 @@ FUNC should leave point at the end of the modified region"
 (setq monky-status-mode-map
       (let ((map (make-keymap)))
 	(define-key map (kbd "s") 'monky-stage-item)
+	(define-key map (kbd "S") 'monky-stage-all)
 	(define-key map (kbd "u") 'monky-unstage-item)
 	(define-key map (kbd "c") 'monky-log-edit)
 	map))
@@ -803,6 +804,13 @@ With a prefix argument, visit in other window."
        (goto-char (point-min))
        (forward-line (1- line))))))
 
+(defun monky-stage-all ()
+  "Add all items in changes to the staging area"
+  (interactive)
+  (monky-with-refresh
+    (setq monky-staged-all-files t)
+    (monky-need-refresh)))
+
 (defun monky-stage-item ()
   "Add the item at point to the staging area."
   (interactive)
@@ -1176,7 +1184,8 @@ before the last command."
   (monky-wash-sequence
    (monky-with-wash-status status file
      (let ((monky-section-hidden-default monky-hide-diffs))
-       (if (member file monky-old-staged-files)
+       (if (or monky-staged-all-files
+	       (member file monky-old-staged-files))
 	   (monky-stage-file file)
 	 (monky-with-section file 'diff
 	   (monky-insert-diff file)))))))
@@ -1191,6 +1200,7 @@ before the last command."
 
 ;; Staged Changes
 
+(defvar monky-staged-all-files nil)
 (defvar monky-old-staged-files '())
 (defvar monky-staged-files '()
   "List of staged files")
@@ -1212,7 +1222,8 @@ before the last command."
       (let ((monky-section-hidden-default t))
 	(dolist (file monky-staged-files)
 	  (monky-with-section file 'diff
-	    (monky-insert-diff file)))))))
+	    (monky-insert-diff file))))))
+  (setq monky-staged-all-files nil))
 
 
 ;;; Status mode
