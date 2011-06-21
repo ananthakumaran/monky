@@ -339,6 +339,8 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "u") 'monky-unstage-item)
 	(define-key map (kbd "U") 'monky-unstage-all)
 	(define-key map (kbd "c") 'monky-log-edit)
+	(define-key map (kbd "p") 'monky-push)
+	(define-key map (kbd "f") 'monky-fetch)
 	map))
 
 ;;; Sections
@@ -686,7 +688,8 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 	(message msg)))
     (setq monky-process nil)
     (monky-set-mode-line-process nil)
-    (monky-refresh-buffer monky-process-client-buffer)))
+    (monky-with-refresh
+      (monky-need-refresh monky-process-client-buffer))))
 
 ;; TODO password?
 
@@ -704,6 +707,13 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
     (monky-run* (append (cons monky-hg-executable
 			      monky-hg-standard-options)
 			args))))
+
+(defun monky-run-hg-async (&rest args)
+  (message "Running %s %s" monky-hg-executable (mapconcat 'identity args " "))
+  (monky-run* (append (cons monky-hg-executable
+			    monky-hg-standard-options)
+		      args)
+	      nil nil nil t))
 
 (defun monky-run-async-with-input (input cmd &rest args)
   (monky-run* (cons cmd args) nil nil nil t input))
@@ -803,7 +813,7 @@ With a prefix argument, visit in other window."
   (interactive)
   (monky-with-refresh
     (setq monky-staged-all-files t)
-    (monky-need-refresh)))
+    (monky-refresh-buffer)))
 
 (defun monky-stage-item ()
   "Add the item at point to the staging area."
@@ -817,7 +827,7 @@ With a prefix argument, visit in other window."
      (monky-run-hg "remove" info))
     ((changes diff)
      (monky-stage-file (monky-section-title item))
-     (monky-need-refresh))
+     (monky-refresh-buffer))
     ((changes)
      (monky-stage-all))
     ((staged diff)
@@ -828,7 +838,7 @@ With a prefix argument, visit in other window."
   (interactive)
   (monky-with-refresh
     (setq monky-staged-files '())
-    (monky-need-refresh)))
+    (monky-refresh-buffer)))
 
 (defun monky-unstage-item ()
   "Remove the item at point from the staging area."
@@ -836,11 +846,22 @@ With a prefix argument, visit in other window."
   (monky-section-action (item info "unstage")
     ((staged diff)
      (monky-unstage-file (monky-section-title item))
-     (monky-need-refresh))
+     (monky-refresh-buffer))
     ((staged)
      (monky-unstage-all))
     ((changes diff)
      (error "Already unstaged"))))
+
+;;; Updating
+
+(defun monky-fetch ()
+  (interactive)
+  (monky-run-hg-async "fetch"))
+
+(defun monky-push ()
+  (interactive)
+  (monky-run-hg-async "push"))
+
 
 ;;; Refresh
 
@@ -875,7 +896,7 @@ With a prefix argument, visit in other window."
       (unwind-protect
 	  (funcall func)
 	(when monky-refresh-needing-buffers
-	  (monky-revert-buffers dir)
+	  (monky-revert-buffers dir t)
 	  (dolist (b (adjoin status-buffer
 			     monky-refresh-needing-buffers))
 	    (monky-refresh-buffer b)))))))
