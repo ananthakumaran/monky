@@ -1056,6 +1056,7 @@ before the last command."
 			  (?! 'missing)
 			  (?? 'untracked)
 			  (?I 'ignored)
+			  (?U 'unresolved)
 			  (t nil)))
 	       (,file (match-string-no-properties 2)))
 	   (delete-region (point) (+ (line-end-position) 1))
@@ -1254,15 +1255,75 @@ before the last command."
   (setq monky-staged-all-files nil))
 
 
+;;; Parents
+
+(defvar monky-parents '())
+(defvar monky-unresolved-files '())
+
+(defun monky-wash-parent ()
+  (if (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")
+      (let ((changeset (match-string 2)))
+	(add-to-list 'monky-parents changeset)
+	(forward-line)
+	(while (not (or (eobp)
+			(looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")))
+	  (forward-line))
+	t)
+    nil))
+
+(defun monky-wash-parents ()
+  (monky-wash-sequence #'monky-wash-parent))
+
+(defun monky-insert-parents ()
+  (monky-hg-section 'parents "Parents:"
+		    #'monky-wash-parents "parents"))
+
+;;; UnResolved Files
+
+(defun monky-wash-unresolved-files ()
+  (monky-wash-sequence
+   (monky-with-wash-status status file
+     (let ((monky-section-hidden-default monky-hide-diffs))
+       (add-to-list 'monky-unresolved-files file)
+       (monky-with-section file 'diff
+	 (monky-insert-diff file))))))
+
+(defun monky-insert-unresolved-files ()
+  (let ((monky-hide-diffs t))
+    (setq monky-unresolved-files '())
+    (monky-hg-section 'unresolved "Unresolved Files:" #'monky-wash-unresolved-files
+		      "resolve" "--list")))
+
+;;; Resolved Files
+
+(defun monky-wash-resolved-files ()
+  (monky-wash-sequence
+   (monky-with-wash-status status file
+     (let ((monky-section-hidden-default monky-hide-diffs))
+       (when (not (member file monky-unresolved-files))
+	 (monky-with-section file 'diff
+	   (monky-insert-diff file)))))))
+
+(defun monky-insert-resolved-files ()
+  (let ((monky-hide-diffs t))
+    (monky-hg-section 'resolved "Resolved Files:" #'monky-wash-resolved-files
+		      "status" "--modified" "--added" "--removed")))
 ;;; Status mode
 
 (defun monkey-refresh-status ()
-  (monky-create-buffer-sections
-    (monky-with-section 'status nil
-      (monky-insert-untracked-files)
-      (monky-insert-missing-files)
-      (monky-insert-changes)
-      (monky-insert-staged-changes))))
+  (let ((monky-parents '())
+	(monky-unresolved-files '()))
+    (monky-create-buffer-sections
+      (monky-with-section 'status nil
+	(monky-insert-parents)
+	(if (> (length monky-parents) 1)
+	    (progn
+	      (monky-insert-unresolved-files)
+	      (monky-insert-resolved-files))
+	  (monky-insert-untracked-files)
+	  (monky-insert-missing-files)
+	  (monky-insert-changes)
+	  (monky-insert-staged-changes))))))
 
 (define-minor-mode monky-status-mode
   "Minor mode for hg status."
