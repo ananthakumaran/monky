@@ -896,7 +896,7 @@ With a prefix argument, visit in other window."
       (unwind-protect
 	  (funcall func)
 	(when monky-refresh-needing-buffers
-	  (monky-revert-buffers dir t)
+	  (monky-revert-buffers dir)
 	  (dolist (b (adjoin status-buffer
 			     monky-refresh-needing-buffers))
 	    (monky-refresh-buffer b)))))))
