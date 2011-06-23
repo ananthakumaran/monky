@@ -688,8 +688,10 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 	(message msg)))
     (setq monky-process nil)
     (monky-set-mode-line-process nil)
-    (monky-with-refresh
-      (monky-need-refresh monky-process-client-buffer))))
+    (if monky-process-client-buffer
+	(with-current-buffer monky-process-client-buffer
+	  (monky-with-refresh
+	    (monky-need-refresh monky-process-client-buffer))))))
 
 ;; TODO password?
 
