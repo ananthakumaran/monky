@@ -341,6 +341,7 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "c") 'monky-log-edit)
 	(define-key map (kbd "p") 'monky-push)
 	(define-key map (kbd "f") 'monky-fetch)
+	(define-key map (kbd "k") 'monky-discard-item)
 	map))
 
 ;;; Sections
@@ -661,8 +662,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 		       (equal (process-exit-status monky-process) 0))
 		 (setq monky-process nil))
 	       (monky-set-mode-line-process nil)
-	       (monky-need-refresh monky-process-client-buffer)
-	       )
+	       (monky-need-refresh monky-process-client-buffer))
 	      (t
 	       (setq successp
 		     (equal (apply 'process-file cmd nil buf nil args) 0))
@@ -864,6 +864,25 @@ With a prefix argument, visit in other window."
   (interactive)
   (monky-run-hg-async "push"))
 
+;;; Miscellaneous
+
+(defun monky-revert-file (file)
+  (when (yes-or-no-p (format "Revert %s? " file))
+    (monky-run-hg "revert" "--no-backup" file)))
+
+(defun monky-discard-item ()
+  (interactive)
+  (monky-section-action (item info "discard")
+    ((untracked file)
+     (when (yes-or-no-p (format "Delete %s? " info))
+       (delete-file info)
+       (monky-refresh-buffer)))
+    ((changes diff)
+     (monky-revert-file (monky-diff-item-file item)))
+    ((staged diff)
+     (monky-revert-file (monky-diff-item-file item)))
+    ((missing file)
+     (monky-revert-file info))))
 
 ;;; Refresh
 
