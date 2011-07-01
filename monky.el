@@ -826,7 +826,7 @@ With a prefix argument, visit in other window."
     ((untracked)
      (monky-run-hg "add"))
     ((missing file)
-     (monky-run-hg "remove" info))
+     (monky-run-hg "remove" "--after" info))
     ((changes diff)
      (monky-stage-file (monky-section-title item))
      (monky-refresh-buffer))
