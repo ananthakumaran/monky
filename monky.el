@@ -543,7 +543,7 @@ CMD is an external command that will be run with ARGS as arguments"
 		 (point)))
 	  (end (monky-section-end section)))
       (if (< beg end)
-          (put-text-property beg end 'invisible hidden)))
+	  (put-text-property beg end 'invisible hidden)))
     (if (not hidden)
 	(dolist (c (monky-section-children section))
 	  (monky-section-set-hidden c (monky-section-hidden c))))))
@@ -1152,69 +1152,50 @@ before the last command."
   (cadr (monky-section-info diff)))
 
 (defun monky-diff-line-file ()
-  (cond ((looking-at "^diff --git ./\\(.*\\) ./\\(.*\\)$")
+  (cond ((looking-at "^diff -r \\(.*\\) \\(.*\\)$")
 	 (match-string-no-properties 2))
-	((looking-at "^diff --cc +\\(.*\\)$")
-	 (match-string-no-properties 1))
 	(t
 	 nil)))
 
-(defun monky-wash-diff-section ()
+(defun monky-wash-diff-section (status)
   (if (looking-at "^diff")
-      (let ((file (monky-diff-line-file))
-	    (end (save-excursion
+      (let* ((file (monky-diff-line-file))
+	     (end (save-excursion
 		   (forward-line)
 		   (if (search-forward-regexp "^diff\\|^@@" nil t)
 		       (goto-char (match-beginning 0))
 		     (goto-char (point-max)))
-		   (point-marker))))
-	(let* ((status (cond
-			((looking-at "^diff --cc")
-			 'unmerged)
-			((save-excursion
-			   (search-forward-regexp "^new file" end t))
-			 'new)
-			((save-excursion
-			   (search-forward-regexp "^deleted" end t))
-			 'deleted)
-			((save-excursion
-			   (search-forward-regexp "^copy" end t))
-			 'renamed)
-			(t
-			 'modified)))
-	       (file2 (cond
-		       ((save-excursion
-			  (search-forward-regexp "^copy from \\(.*\\)"
-						 end t))
-			(match-string-no-properties 1)))))
-	  (monky-set-section-info (list status file file2))
-	  (monky-insert-diff-title status file file2)
-	  (goto-char end)
-	  (let ((monky-section-hidden-default nil))
-	    (monky-wash-sequence #'monky-wash-hunk))))
+		   (point-marker)))
+	     (status (or status
+			(cond
+			 ((save-excursion
+			    (search-forward-regexp "^--- /dev/null" end t))
+			  'new)
+			 ((save-excursion
+			    (search-forward-regexp "^+++ /dev/null" end t))
+			  'removed)
+			 (t 'modified)))))
+	(monky-set-section-info (list status file))
+	(monky-insert-diff-title status file)
+	(goto-char end)
+	(let ((monky-section-hidden-default nil))
+	  (monky-wash-sequence #'monky-wash-hunk)))
     nil))
 
 ;; TODO cleanup
-(defun monky-insert-diff (file)
+(defun monky-insert-diff (file &optional status)
   (let ((p (point)))
-    (monky-hg-insert (list "diff" "--git" file))
+    (monky-hg-insert (list "diff" file))
     (if (not (eq (char-before) ?\n))
 	(insert "\n"))
     (save-restriction
       (narrow-to-region p (point))
       (goto-char p)
-      (monky-wash-diff-section)
+      (monky-wash-diff-section status)
       (goto-char (point-max)))))
 
-(defun monky-insert-diff-title (status file file2)
-  (let ((status-text (case status
-		       (modified (format "Modified %s" file))
-		       (new (format "New      %s" file))
-		       (deleted (format "Deleted  %s" file))
-		       (renamed (format "Renamed %s (from %s)"
-					file file2))
-		       (t (format "?        %s" file)))))
-    (insert "\t" status-text "\n")))
+(defun monky-insert-diff-title (status file)
+  (insert (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)))
 
 ;;; Untracked files
 
@@ -1238,7 +1219,7 @@ before the last command."
 	       (member file monky-old-staged-files))
 	   (monky-stage-file file)
 	 (monky-with-section file 'diff
-	   (monky-insert-diff file)))))))
+	   (monky-insert-diff file status)))))))
 
 
 (defun monky-insert-changes ()
@@ -1307,7 +1288,7 @@ before the last command."
      (let ((monky-section-hidden-default monky-hide-diffs))
        (add-to-list 'monky-unresolved-files file)
        (monky-with-section file 'diff
-	 (monky-insert-diff file))))))
+	 (monky-insert-diff file status))))))
 
 (defun monky-insert-unresolved-files ()
   (let ((monky-hide-diffs t))
