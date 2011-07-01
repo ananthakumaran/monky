@@ -342,6 +342,8 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "p") 'monky-push)
 	(define-key map (kbd "f") 'monky-fetch)
 	(define-key map (kbd "k") 'monky-discard-item)
+	(define-key map (kbd "m") 'monky-resolve-item)
+	(define-key map (kbd "x") 'monky-unresolve-item)
 	map))
 
 ;;; Sections
@@ -833,7 +835,11 @@ With a prefix argument, visit in other window."
     ((changes)
      (monky-stage-all))
     ((staged diff)
-     (error "Already staged"))))
+     (error "Already staged"))
+    ((unmodified diff)
+     (error "Cannot partially commit a merge"))
+    ((merged diff)
+     (error "Cannot partially commit a merge"))))
 
 (defun monky-unstage-all ()
   "Remove all items from the staging area"
@@ -863,6 +869,24 @@ With a prefix argument, visit in other window."
 (defun monky-push ()
   (interactive)
   (monky-run-hg-async "push"))
+
+;;; Merging
+
+(defun monky-unresolve-item ()
+  (interactive)
+  (monky-section-action (item info "unresolve")
+    ((merged diff)
+     (if (eq (monky-diff-item-kind item) 'resolved)
+	 (monky-run-hg "resolve" "--unmark" (monky-diff-item-file item))
+       (error "Already unresolved")))))
+
+(defun monky-resolve-item ()
+  (interactive)
+  (monky-section-action (item info "resolve")
+    ((merged diff)
+     (if (eq (monky-diff-item-kind item) 'unresolved)
+	 (monky-run-hg "resolve" "--mark" (monky-diff-item-file item))
+       (error "Already resolved")))))
 
 ;;; Miscellaneous
 
@@ -1200,13 +1224,13 @@ before the last command."
 ;;; Untracked files
 
 (defun monky-insert-untracked-files ()
-  (monky-hg-section 'untracked "Untracked files" #'monky-wash-files
+  (monky-hg-section 'untracked "Untracked files:" #'monky-wash-files
 		    "status" "--unknown"))
 
 ;;; Missing files
 
 (defun monky-insert-missing-files ()
-  (monky-hg-section 'missing "Missing files" #'monky-wash-files
+  (monky-hg-section 'missing "Missing files:" #'monky-wash-files
 		    "status" "--deleted"))
 
 ;;; Changes
@@ -1260,7 +1284,10 @@ before the last command."
 ;;; Parents
 
 (defvar monky-parents '())
-(defvar monky-unresolved-files '())
+(make-variable-buffer-local 'monky-parents)
+
+(defun monky-merge-p ()
+  (> (length monky-parents) 1))
 
 (defun monky-wash-parent ()
   (if (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")
@@ -1280,52 +1307,59 @@ before the last command."
   (monky-hg-section 'parents "Parents:"
 		    #'monky-wash-parents "parents"))
 
-;;; UnResolved Files
+;;; Merged Files
 
-(defun monky-wash-unresolved-files ()
+(defvar monky-merged-files '())
+(make-variable-buffer-local 'monky-merged-files)
+
+(defun monky-wash-merged-files ()
   (monky-wash-sequence
    (monky-with-wash-status status file
      (let ((monky-section-hidden-default monky-hide-diffs))
-       (add-to-list 'monky-unresolved-files file)
-       (monky-with-section file 'diff
-	 (monky-insert-diff file status))))))
+       (add-to-list 'monky-merged-files file)
+       ;; XXX hg uses R for resolved and removed status
+       (let ((status (if (eq status 'unresolved)
+			 'unresolved
+		       'resolved)))
+	 (monky-with-section file 'diff
+	   (monky-insert-diff file status)))))))
 
-(defun monky-insert-unresolved-files ()
+(defun monky-insert-merged-files ()
   (let ((monky-hide-diffs t))
-    (setq monky-unresolved-files '())
-    (monky-hg-section 'unresolved "Unresolved Files:" #'monky-wash-unresolved-files
+    (setq monky-merged-files '())
+    (monky-hg-section 'merged "Merged Files:" #'monky-wash-merged-files
 		      "resolve" "--list")))
 
-;;; Resolved Files
+;;; UnModified Files
 
-(defun monky-wash-resolved-files ()
+(defun monky-wash-unmodified-files ()
   (monky-wash-sequence
    (monky-with-wash-status status file
      (let ((monky-section-hidden-default monky-hide-diffs))
-       (when (not (member file monky-unresolved-files))
+       (when (not (member file monky-merged-files))
 	 (monky-with-section file 'diff
 	   (monky-insert-diff file)))))))
 
 (defun monky-insert-resolved-files ()
   (let ((monky-hide-diffs t))
-    (monky-hg-section 'resolved "Resolved Files:" #'monky-wash-resolved-files
+    (monky-hg-section 'unmodified "UnModified Files during Merge:" #'monky-wash-unmodified-files
 		      "status" "--modified" "--added" "--removed")))
 ;;; Status mode
 
 (defun monkey-refresh-status ()
-  (let ((monky-parents '())
-	(monky-unresolved-files '()))
-    (monky-create-buffer-sections
-      (monky-with-section 'status nil
-	(monky-insert-parents)
-	(if (> (length monky-parents) 1)
-	    (progn
-	      (monky-insert-unresolved-files)
-	      (monky-insert-resolved-files))
-	  (monky-insert-untracked-files)
-	  (monky-insert-missing-files)
-	  (monky-insert-changes)
-	  (monky-insert-staged-changes))))))
+  (setq monky-parents '()
+	monky-merged-files '())
+  (monky-create-buffer-sections
+    (monky-with-section 'status nil
+      (monky-insert-parents)
+      (if (monky-merge-p)
+	  (progn
+	    (monky-insert-merged-files)
+	    (monky-insert-resolved-files))
+	(monky-insert-untracked-files)
+	(monky-insert-missing-files)
+	(monky-insert-changes)
+	(monky-insert-staged-changes)))))
 
 (define-minor-mode monky-status-mode
   "Minor mode for hg status."
@@ -1391,7 +1425,7 @@ before the last command."
 (defun monky-log-edit ()
   "Brings up a buffer to allow editing of commit messages."
   (interactive)
-  (if (not monky-staged-files)
+  (if (not (or monky-staged-files (monky-merge-p)))
       (error "Nothing staged.")
     (monky-pop-to-log-edit "commit")))
 
