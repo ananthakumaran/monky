@@ -673,10 +673,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (or successp
 	  noerror
 	  (error
-	   (or (with-current-buffer (get-buffer monky-process-buffer-name)
-		 (when (re-search-forward
-			(concat "^abort: \\(.*\\)" paragraph-separate) nil t)
-		   (match-string 1)))
+	   (or (monky-abort-message (get-buffer monky-process-buffer-name))
 	       "Hg failed")))
       successp)))
 
@@ -688,12 +685,23 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 	(goto-char (point-max))
 	(insert msg "\n")
 	(message msg)))
+    (when (not successp)
+      (let ((msg (monky-abort-message (process-buffer process))))
+	(and msg (message msg))))
     (setq monky-process nil)
     (monky-set-mode-line-process nil)
     (if monky-process-client-buffer
 	(with-current-buffer monky-process-client-buffer
 	  (monky-with-refresh
 	    (monky-need-refresh monky-process-client-buffer))))))
+
+(defun monky-abort-message (buffer)
+  (with-current-buffer buffer
+    (save-excursion
+      (goto-char (point-min))
+      (when (re-search-forward
+	    (concat "^abort: \\(.*\\)" paragraph-separate) nil t)
+       (match-string 1)))))
 
 ;; TODO password?
 
