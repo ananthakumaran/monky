@@ -1412,7 +1412,7 @@ before the last command."
       (apply #'monky-run-async-with-input commit-buf
 	     monky-hg-executable
 	     (append monky-hg-standard-options
-		     (list "commit" "-l" "/dev/stdin")
+		     (list "commit" "--logfile" "-")
 		     monky-staged-files))))
   (erase-buffer)
   (bury-buffer)
