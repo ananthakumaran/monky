@@ -55,6 +55,11 @@ save all modified buffers without asking."
   :group 'monky
   :type 'boolean)
 
+(defcustom monky-log-edit-confirm-cancellation nil
+  "Require acknowledgment before canceling the log edit buffer."
+  :group 'monky
+  :type 'boolean)
+
 (defcustom monky-process-popup-time -1
   "Popup the process buffer if a command takes longer than this many seconds."
   :group 'monky
@@ -253,7 +258,9 @@ Many Monky faces inherit from this one by default."
   "Face for selected options on monky's menu"
   :group 'monky-faces)
 
-(defvar monky-mode-hook nil)
+(defvar monky-mode-hook nil
+  "Hook run by `monky-mode'.")
+
 (put 'monky-mode 'mode-class 'special)
 
 ;;; Compatibilities
@@ -1407,7 +1414,9 @@ before the last command."
 
 ;;; Log edit mode
 
-(defvar monky-pre-log-edit-window-configuration nil)
+
+(defvar monky-log-edit-mode-hook nil
+  "Hook run by `monky-log-edit-mode'.")
 
 (defvar monky-log-edit-buffer-name "*monky-edit-log*"
   "Buffer name for composing commit messages.")
@@ -1415,9 +1424,20 @@ before the last command."
 (setq monky-log-edit-mode-map
       (let ((map (make-sparse-keymap)))
 	(define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
+	(define-key map (kbd "C-c C-k") 'monky-log-edit-cancel-log-message)
+	(define-key map (kbd "C-x C-s") (lambda ()
+					  (interactive)
+					  (message "Not saved. Use C-c C-c to finalize this commit message.")))
 	map))
 
 (define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
+
+(defvar monky-pre-log-edit-window-configuration nil)
+
+(defun monky-restore-pre-log-edit-window-configuration ()
+  (when monky-pre-log-edit-window-configuration
+    (set-window-configuration monky-pre-log-edit-window-configuration)
+    (setq monky-pre-log-edit-window-configuration nil)))
 
 (defun monky-log-edit-commit ()
   "Finish edit and commit."
@@ -1433,9 +1453,17 @@ before the last command."
 		     monky-staged-files))))
   (erase-buffer)
   (bury-buffer)
-  (when monky-pre-log-edit-window-configuration
-    (set-window-configuration monky-pre-log-edit-window-configuration)
-    (setq monky-pre-log-edit-window-configuration nil)))
+  (monky-restore-pre-log-edit-window-configuration))
+
+(defun monky-log-edit-cancel-log-message ()
+  "Abort edits and erase commit message being composed."
+  (interactive)
+  (when (or (not monky-log-edit-confirm-cancellation)
+	    (yes-or-no-p
+	     "Really cancel editing the log (any changes will be lost)?"))
+    (erase-buffer)
+    (bury-buffer)
+    (monky-restore-pre-log-edit-window-configuration)))
 
 (defun monky-pop-to-log-edit (operation)
   (let ((dir default-directory)
