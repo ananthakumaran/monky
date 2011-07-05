@@ -22,6 +22,8 @@
 
 ;;; Code:
 
+(eval-when-compile (require 'cl))
+
 (defgroup monky nil
   "Controlling Hg from Emacs."
   :prefix "monky-"
@@ -251,6 +253,9 @@ Many Monky faces inherit from this one by default."
   "Face for selected options on monky's menu"
   :group 'monky-faces)
 
+(defvar monky-mode-hook nil)
+(put 'monky-mode 'mode-class 'special)
+
 ;;; Compatibilities
 
 (defalias 'monky-start-process
@@ -292,8 +297,8 @@ Many Monky faces inherit from this one by default."
 	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
 
 (defun monky-prefix-p (prefix list)
-  "Returns non-nil if PREFIX is a prefix of LIST.  PREFIX and LIST should both be
-lists.
+  "Return non-nil if PREFIX is a prefix of LIST.
+PREFIX and LIST should both be lists.
 
 If the car of PREFIX is the symbol '*, then return non-nil if the cdr of PREFIX
 is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
@@ -307,7 +312,7 @@ is a sublist of LIST (as if '* matched zero or more arbitrary elements of LIST)"
 	     (monky-prefix-p (cdr prefix) (cdr list))))))
 
 (defun monky-wash-sequence (func)
-  "Run FUNC until end of buffer is reached
+  "Run FUNC until end of buffer is reached.
 
 FUNC should leave point at the end of the modified region"
   (while (and (not (eobp))
@@ -700,8 +705,8 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
     (save-excursion
       (goto-char (point-min))
       (when (re-search-forward
-	    (concat "^abort: \\(.*\\)" paragraph-separate) nil t)
-       (match-string 1)))))
+	     (concat "^abort: \\(.*\\)" paragraph-separate) nil t)
+	(match-string 1)))))
 
 ;; TODO password?
 
@@ -769,7 +774,7 @@ HEAD is (SECTION INFO &optional OPNAME),
 CLAUSES is a list of CLAUSE, each clause is (SECTION-TYPE &BODY)
 where SECTION-TYPE describe section where BODY will be run.
 
-This returns non-nil if some section matches. If the
+This returns non-nil if some section matches.  If the
 corresponding body return a non-nil value, it is returned,
 otherwise it return t.
 
@@ -821,7 +826,7 @@ With a prefix argument, visit in other window."
        (forward-line (1- line))))))
 
 (defun monky-stage-all ()
-  "Add all items in changes to the staging area"
+  "Add all items in Changes to the staging area."
   (interactive)
   (monky-with-refresh
     (setq monky-staged-all-files t)
@@ -871,16 +876,19 @@ With a prefix argument, visit in other window."
 ;;; Updating
 
 (defun monky-fetch ()
+  "Run hg fetch."
   (interactive)
   (monky-run-hg-async "fetch"))
 
 (defun monky-push ()
+  "Run hg push."
   (interactive)
   (monky-run-hg-async "push"))
 
 ;;; Merging
 
 (defun monky-unresolve-item ()
+  "Mark the item at point as unresolved."
   (interactive)
   (monky-section-action (item info "unresolve")
     ((merged diff)
@@ -889,6 +897,7 @@ With a prefix argument, visit in other window."
        (error "Already unresolved")))))
 
 (defun monky-resolve-item ()
+  "Mark the item at point as resolved."
   (interactive)
   (monky-section-action (item info "resolve")
     ((merged diff)
@@ -903,6 +912,7 @@ With a prefix argument, visit in other window."
     (monky-run-hg "revert" "--no-backup" file)))
 
 (defun monky-discard-item ()
+  "Delete the file if not tracked, otherwise revert it."
   (interactive)
   (monky-section-action (item info "discard")
     ((untracked file)
@@ -1028,6 +1038,9 @@ before the last command."
 ;;; Monky mode
 
 (defun monky-mode ()
+  "View the status of a Hg Repository.
+
+\\{monky-mode-map}"
   (kill-all-local-variables)
   (buffer-disable-undo)
   (setq buffer-read-only t)
@@ -1039,7 +1052,8 @@ before the last command."
 	line-move-visual nil)
   (add-hook 'pre-command-hook #'monky-remember-point nil t)
   (add-hook 'post-command-hook #'monky-post-command-hook t t)
-  (use-local-map monky-mode-map))
+  (use-local-map monky-mode-map)
+  (run-hooks 'monky-mode-hook))
 
 (defun monky-mode-init (dir submode refresh-func &rest refresh-args)
   (setq default-directory dir
@@ -1193,20 +1207,20 @@ before the last command."
   (if (looking-at "^diff")
       (let* ((file (monky-diff-line-file))
 	     (end (save-excursion
-		   (forward-line)
-		   (if (search-forward-regexp "^diff\\|^@@" nil t)
-		       (goto-char (match-beginning 0))
-		     (goto-char (point-max)))
-		   (point-marker)))
+		    (forward-line)
+		    (if (search-forward-regexp "^diff\\|^@@" nil t)
+			(goto-char (match-beginning 0))
+		      (goto-char (point-max)))
+		    (point-marker)))
 	     (status (or status
-			(cond
-			 ((save-excursion
-			    (search-forward-regexp "^--- /dev/null" end t))
-			  'new)
-			 ((save-excursion
-			    (search-forward-regexp "^+++ /dev/null" end t))
-			  'removed)
-			 (t 'modified)))))
+			 (cond
+			  ((save-excursion
+			     (search-forward-regexp "^--- /dev/null" end t))
+			   'new)
+			  ((save-excursion
+			     (search-forward-regexp "^+++ /dev/null" end t))
+			   'removed)
+			  (t 'modified)))))
 	(monky-set-section-info (list status file))
 	(monky-insert-diff-title status file)
 	(goto-char end)
@@ -1266,7 +1280,7 @@ before the last command."
 (defvar monky-staged-all-files nil)
 (defvar monky-old-staged-files '())
 (defvar monky-staged-files '()
-  "List of staged files")
+  "List of staged files.")
 
 (make-variable-buffer-local 'monky-staged-files)
 (put 'monky-staged-files 'permanent-local t)
@@ -1370,13 +1384,16 @@ before the last command."
 	(monky-insert-staged-changes)))))
 
 (define-minor-mode monky-status-mode
-  "Minor mode for hg status."
+  "Minor mode for hg status.
+
+\\{monky-status-mode-map}"
   :group monky
   :init-value ()
   :lighter ()
   :keymap monky-status-mode-map)
 
 (defun monky-status ()
+  "Show the status of Hg repository."
   (interactive)
   (let* ((rootdir (monky-get-root-dir))
 	 (buf (or (monky-find-status-buffer rootdir)
@@ -1431,10 +1448,12 @@ before the last command."
     (message "Type C-c C-c to %s (C-c C-k to cancel)." operation)))
 
 (defun monky-log-edit ()
-  "Brings up a buffer to allow editing of commit messages."
+  "Bring up a buffer to allow editing of commit messages."
   (interactive)
   (if (not (or monky-staged-files (monky-merge-p)))
-      (error "Nothing staged.")
+      (error "Nothing staged")
     (monky-pop-to-log-edit "commit")))
 
 (provide 'monky)
+
+;;; monky.el ends here
