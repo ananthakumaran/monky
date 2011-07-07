@@ -276,6 +276,12 @@ Many Monky faces inherit from this one by default."
 
 ;;; Utilities
 
+(defmacro monky-def-permanent-buffer-local (name &optional init-value)
+  `(progn
+     (defvar ,name ,init-value)
+     (make-variable-buffer-local ',name)
+     (put ',name 'permanent-local t)))
+
 (defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
 (defun monky-bug-report (str)
   (message "Unknown error: %s\nPlease file a bug at %s"
@@ -337,11 +343,14 @@ FUNC should leave point at the end of the modified region"
 (setq monky-mode-map
       (let ((map (make-keymap)))
 	(suppress-keymap map t)
+	(define-key map (kbd "n") 'monky-goto-next-section)
+	(define-key map (kbd "p") 'monky-goto-previous-section)
 	(define-key map (kbd "RET") 'monky-visit-item)
 	(define-key map (kbd "TAB") 'monky-toggle-section)
 	(define-key map (kbd "g") 'monky-refresh)
 	(define-key map (kbd "$") 'monky-display-process)
 	(define-key map (kbd ":") 'monky-hg-command)
+	(define-key map (kbd "l") 'monky-log)
 	map))
 
 (setq monky-status-mode-map
@@ -358,12 +367,17 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "x") 'monky-unresolve-item)
 	map))
 
+(setq monky-log-mode-map
+      (let ((map (make-keymap)))
+	map))
+
+(setq monky-commit-mode-map
+      (let ((map (make-keymap)))
+	map))
+
 ;;; Sections
 
-(defvar monky-top-section nil
-  "The top section of the current buffer.")
-(make-variable-buffer-local 'monky-top-section)
-(put 'monky-top-section 'permanent-local t)
+(monky-def-permanent-buffer-local monky-top-section)
 
 (defvar monky-old-top-section nil)
 (defvar monky-section-hidden-default nil)
@@ -414,7 +428,6 @@ BODY must leave point at the end of the created section.
 
 If TYPE is nil, the section won't be highlighted."
   (declare (indent 2))
-  "doc."
   (let ((s (make-symbol "*section*")))
     `(let* ((,s (monky-new-section ,title ,type))
 	    (monky-top-section ,s))
@@ -519,6 +532,91 @@ CMD is an external command that will be run with ARGS as arguments"
   "Return the monky section at point."
   (or (get-text-property (point) 'monky-section)
       monky-top-section))
+
+(defun monky-find-section-after (pos secs)
+  "Find the first section that begins after POS in the list SECS."
+  (while (and secs
+	      (not (> (monky-section-beginning (car secs)) pos)))
+    (setq secs (cdr secs)))
+  (car secs))
+
+(defun monky-find-section-before (pos secs)
+  "Find the last section that begins before POS in the list SECS."
+  (let ((prev nil))
+    (while (and secs
+		(not (> (monky-section-beginning (car secs)) pos)))
+      (setq prev (car secs))
+      (setq secs (cdr secs)))
+    prev))
+
+(defun monky-next-section (section)
+  "Return the section that is after SECTION."
+  (let ((parent (monky-section-parent section)))
+    (if parent
+	(let ((next (cadr (memq section
+				(monky-section-children parent)))))
+	  (or next
+	      (monky-next-section parent))))))
+
+(defun monky-goto-next-section ()
+  "Go to the next monky section."
+  (interactive)
+  (let* ((section (monky-current-section))
+	 (next (or (and (not (monky-section-hidden section))
+			(monky-section-children section)
+			(monky-find-section-after (point)
+						  (monky-section-children
+						   section)))
+		   (monky-next-section section))))
+    (cond
+     (next
+      (goto-char (monky-section-beginning next))
+      (if (eq monky-submode 'log)
+	  (monky-show-commit next))
+      (if (not (monky-section-hidden next))
+	  (let ((offset (- (line-number-at-pos
+			    (monky-section-beginning next))
+			   (line-number-at-pos
+			    (monky-section-end next)))))
+	    (if (< offset 0)
+		(recenter offset)))))
+     (t (message "No next section")))))
+
+(defun monky-prev-section (section)
+  "Return the section that is before SECTION."
+  (let ((parent (monky-section-parent section)))
+    (if parent
+	(let ((prev (cadr (memq section
+				(reverse (monky-section-children parent))))))
+	  (cond (prev
+		 (while (and (not (monky-section-hidden prev))
+			     (monky-section-children prev))
+		   (setq prev (car (reverse (monky-section-children prev)))))
+		 prev)
+		(t
+		 parent))))))
+
+
+(defun monky-goto-previous-section ()
+  "Goto the previous monky section."
+  (interactive)
+  (let ((section (monky-current-section)))
+    (cond ((= (point) (monky-section-beginning section))
+	   (let ((prev (monky-prev-section (monky-current-section))))
+	     (if prev
+		 (progn
+		   (if (eq monky-submode 'log)
+		       (monky-show-commit prev))
+		   (goto-char (monky-section-beginning prev)))
+	       (message "No previous section"))))
+	  (t
+	   (let ((prev (monky-find-section-before (point)
+						  (monky-section-children
+						   section))))
+	     (if (eq monky-submode 'log)
+		 (monky-show-commit (or prev section)))
+	     (goto-char (monky-section-beginning (or prev section))))))))
+
 
 (defun monky-section-context-type (section)
   (if (null section)
@@ -830,7 +928,9 @@ With a prefix argument, visit in other window."
 	   (line (monky-hunk-item-target-line item)))
        (find-file file)
        (goto-char (point-min))
-       (forward-line (1- line))))))
+       (forward-line (1- line))))
+    ((commit)
+     (message (monky-show-commit info)))))
 
 (defun monky-stage-all ()
   "Add all items in Changes to the staging area."
@@ -1044,6 +1144,10 @@ before the last command."
 
 ;;; Monky mode
 
+(monky-def-permanent-buffer-local monky-submode)
+(monky-def-permanent-buffer-local monky-refresh-function)
+(monky-def-permanent-buffer-local monky-refresh-args)
+
 (defun monky-mode ()
   "View the status of a Hg Repository.
 
@@ -1087,6 +1191,9 @@ before the last command."
 (defun monky-hg-string (&rest args)
   (monky-trim-line (monky-hg-output args)))
 
+(defun monky-hg-exit-code (&rest args)
+  (apply #'process-file monky-hg-executable nil nil nil
+	 (append monky-hg-standard-options args)))
 
 (defun monky-get-root-dir ()
   (let ((root (monky-hg-string "root")))
@@ -1210,7 +1317,7 @@ before the last command."
 	(t
 	 nil)))
 
-(defun monky-wash-diff-section (status)
+(defun monky-wash-diff-section (&optional status)
   (if (looking-at "^diff")
       (let* ((file (monky-diff-line-file))
 	     (end (save-excursion
@@ -1235,7 +1342,14 @@ before the last command."
 	  (monky-wash-sequence #'monky-wash-hunk)))
     nil))
 
-;; TODO cleanup
+(defun monky-wash-diff ()
+  (let ((monky-section-hidden-default monky-hide-diffs))
+    (monky-with-section nil 'diff
+      (monky-wash-diff-section))))
+
+(defun monky-wash-diffs ()
+  (monky-wash-sequence #'monky-wash-diff))
+
 (defun monky-insert-diff (file &optional status)
   (let ((p (point)))
     (monky-hg-insert (list "diff" file))
@@ -1286,11 +1400,7 @@ before the last command."
 
 (defvar monky-staged-all-files nil)
 (defvar monky-old-staged-files '())
-(defvar monky-staged-files '()
-  "List of staged files.")
-
-(make-variable-buffer-local 'monky-staged-files)
-(put 'monky-staged-files 'permanent-local t)
+(monky-def-permanent-buffer-local monky-staged-files)
 
 (defun monky-stage-file (file)
   (if (not (member file monky-staged-files))
@@ -1412,8 +1522,102 @@ before the last command."
     (monky-mode-init rootdir 'status #'monkey-refresh-status)
     (monky-status-mode t)))
 
-;;; Log edit mode
+;;; Log mode
 
+(define-minor-mode monky-log-mode
+  "Minor mode for hg log.
+
+\\{monky-log-mode-map}"
+  :group monky
+  :init-value ()
+  :lighter ()
+  :keymap monky-log-mode-map)
+
+(defvar monky-log-buffer-name "*monky-log*")
+
+
+(defun monky-present-log-line (id message)
+  (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
+	  " * "
+	  (propertize message 'face 'monky-log-message)))
+
+(defun monky-log ()
+  (interactive)
+  (let ((topdir (monky-get-root-dir)))
+    (pop-to-buffer monky-log-buffer-name)
+    (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
+    (monky-log-mode t)))
+
+
+(defun monky-wash-log-line ()
+  (if (looking-at "\\([a-z0-9]\\{40\\}\\) \\(.*\\)$")
+      (let ((id (match-string 1))
+	    (msg (match-string 2)))
+	(delete-region (point-at-bol) (point-at-eol))
+	(monky-with-section id 'commit
+	  (insert (monky-present-log-line id msg))
+	  (monky-set-section-info id)
+	  (forward-line))
+	t)
+    nil))
+
+(defun monky-wash-logs ()
+  (let ((monky-old-top-section nil))
+    (monky-wash-sequence #'monky-wash-log-line)))
+
+(defun monky-refresh-log-buffer ()
+  (monky-create-buffer-sections
+    (monky-with-section 'log nil
+      (monky-hg-section nil "Commits"
+			#'monky-wash-logs
+			"log" "--template" "{node} {desc|firstline}\n"))))
+
+
+;;; Commit mode
+
+(define-minor-mode monky-commit-mode
+  "Minor mode to view a hg commit.
+
+\\{monky-commit-mode-map}"
+
+  :group monky
+  :init-value ()
+  :lighter ()
+  :keymap monky-commit-mode-map)
+
+(defvar monky-commit-buffer-name "*monky-commit*")
+
+(defun monky-show-commit (commit &optional select)
+  (when (monky-section-p commit)
+    (setq commit (monky-section-info commit)))
+  (unless (and commit
+	       (eql 0 (monky-hg-exit-code "id" "--rev" commit)))
+    (error "%s is not a commit" commit))
+  (let ((topdir (monky-get-root-dir))
+	(buffer (get-buffer-create monky-commit-buffer-name)))
+    (display-buffer buffer)
+    (with-current-buffer buffer
+      (monky-mode-init topdir 'commit
+		       #'monky-refresh-commit-buffer commit)
+      (monky-commit-mode t))
+    (if select
+	(pop-to-buffer buf))))
+
+(defun monky-refresh-commit-buffer (commit)
+  (monky-create-buffer-sections
+    (monky-hg-section nil nil
+		      'monky-wash-commit
+		      "log"
+		      "--patch"
+		      "--rev" commit)))
+
+(defun monky-wash-commit ()
+  (while (and (not (eobp)) (not (looking-at "^diff")) )
+    (forward-line))
+  (when (looking-at "^diff")
+    (monky-wash-diffs)))
+
+;;; Log edit mode
 
 (defvar monky-log-edit-mode-hook nil
   "Hook run by `monky-log-edit-mode'.")
@@ -1425,9 +1629,10 @@ before the last command."
       (let ((map (make-sparse-keymap)))
 	(define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
 	(define-key map (kbd "C-c C-k") 'monky-log-edit-cancel-log-message)
-	(define-key map (kbd "C-x C-s") (lambda ()
-					  (interactive)
-					  (message "Not saved. Use C-c C-c to finalize this commit message.")))
+	(define-key map (kbd "C-x C-s")
+	  (lambda ()
+	    (interactive)
+	    (message "Not saved. Use C-c C-c to finalize this commit message.")))
 	map))
 
 (define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
