@@ -64,8 +64,18 @@ save all modified buffers without asking."
   "Popup the process buffer if a command takes longer than this many seconds."
   :group 'monky
   :type '(choice (const :tag "Never" -1)
-		 (const :tag "Immediately" 0)
-		 (integer :tag "After this many seconds")))
+                 (const :tag "Immediately" 0)
+                 (integer :tag "After this many seconds")))
+
+(defcustom monky-log-cutoff-length 100
+  "The maximum number of commits to show in the log buffer."
+  :group 'monky
+  :type 'integer)
+
+(defcustom monky-log-infinite-length 99999
+  "Number of log used to show as maximum for `monky-log-cutoff-length'."
+  :group 'monky
+  :type 'integer)
 
 
 (defgroup monky-faces nil
@@ -369,6 +379,7 @@ FUNC should leave point at the end of the modified region"
 
 (setq monky-log-mode-map
       (let ((map (make-keymap)))
+	(define-key map (kbd "e") 'monky-log-show-more-entries)
 	map))
 
 (setq monky-commit-mode-map
@@ -930,7 +941,9 @@ With a prefix argument, visit in other window."
        (goto-char (point-min))
        (forward-line (1- line))))
     ((commit)
-     (message (monky-show-commit info)))))
+     (message (monky-show-commit info)))
+    ((longer)
+     (monky-log-show-more-entries))))
 
 (defun monky-stage-all ()
   "Add all items in Changes to the staging area."
@@ -1538,8 +1551,8 @@ before the last command."
 
 (defun monky-present-log-line (id message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
-	  " * "
-	  (propertize message 'face 'monky-log-message)))
+          " * "
+          (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
   (interactive)
@@ -1552,25 +1565,60 @@ before the last command."
 (defun monky-wash-log-line ()
   (if (looking-at "\\([a-z0-9]\\{40\\}\\) \\(.*\\)$")
       (let ((id (match-string 1))
-	    (msg (match-string 2)))
-	(delete-region (point-at-bol) (point-at-eol))
-	(monky-with-section id 'commit
-	  (insert (monky-present-log-line id msg))
-	  (monky-set-section-info id)
-	  (forward-line))
-	t)
+            (msg (match-string 2)))
+        (delete-region (point-at-bol) (point-at-eol))
+        (monky-with-section id 'commit
+          (insert (monky-present-log-line id msg))
+          (monky-set-section-info id)
+	  (when monky-log-count (incf monky-log-count))
+          (forward-line))
+        t)
     nil))
 
 (defun monky-wash-logs ()
   (let ((monky-old-top-section nil))
     (monky-wash-sequence #'monky-wash-log-line)))
 
+(defvar monky-log-count ()
+  "Internal var used to count the number of logs actually added in a buffer.")
+
+(defmacro monky-create-log-buffer-sections (&rest body)
+  "Empty current buffer of text and monky's section, and then evaluate BODY.
+
+if the number of logs inserted in the buffer is `monky-log-cutoff-length'
+insert a line to tell how to insert more of them"
+  (declare (indent 0))
+  `(let ((monky-log-count 0))
+     (monky-create-buffer-sections
+       ,@body
+       (if (= monky-log-count monky-log-cutoff-length)
+	   (monky-with-section "longer"  'longer
+	     (insert "type \"e\" to show more logs\n"))))))
+
+(defun monky-log-show-more-entries (&optional arg)
+  "Grow the number of log entries shown.
+
+With no prefix optional ARG, show twice as much log entries.
+With a numerical prefix ARG, add this number to the number of shown log entries.
+With a non numeric prefix ARG, show all entries"
+  (interactive "P")
+  (make-local-variable 'monky-log-cutoff-length)
+  (cond
+   ((numberp arg)
+    (setq monky-log-cutoff-length (+ monky-log-cutoff-length arg)))
+   (arg
+    (setq monky-log-cutoff-length monky-log-infinite-length))
+   (t (setq monky-log-cutoff-length (* monky-log-cutoff-length 2))))
+  (monky-refresh))
+
 (defun monky-refresh-log-buffer ()
-  (monky-create-buffer-sections
+  (monky-create-log-buffer-sections
     (monky-with-section 'log nil
       (monky-hg-section nil "Commits"
-			#'monky-wash-logs
-			"log" "--template" "{node} {desc|firstline}\n"))))
+                        #'monky-wash-logs
+                        "log"
+			"--limit" (number-to-string monky-log-cutoff-length)
+                        "--template" "{node} {desc|firstline}\n"))))
 
 
 ;;; Commit mode
