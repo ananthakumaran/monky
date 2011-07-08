@@ -1,0 +1,96 @@
+\input texinfo   @c -*-texinfo-*-
+@c %**start of header
+@setfilename monky.info
+@settitle Monky User Manual
+@c %**end of header
+
+@copying
+Copyright @copyright{} 2010 Anantha Kumaran.
+
+@quotation
+Permission is granted to copy, distribute and/or modify this document
+under the terms of the GNU Free Documentation License, Version 1.2 or
+any later version published by the Free Software Foundation; with no
+Invariant Sections, with no Front-Cover Texts, and with no Back-Cover
+Texts.
+@end quotation
+@end copying
+
+@node Top
+@top Monky User Manual
+
+Monky is an emacs extension, provides an interactive interface for Hg
+
+@menu
+* Introduction::
+* Status::
+* Missing Files::
+* Staging and Committing::
+* Merged Files::
+* Log::
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+Monky provides an interactive interface for Hg. Using Monky, your can
+selectively commit files, view the diffs and other things.
+
+@node Status
+@chapter Status
+
+Running @kbd{M-x monky-status} while visiting any file in a repo
+displays the status of the hg repo. The status buffer list down the
+missing files, untracked files and changed files.
+
+During a merge the buffer will show the list of merged files, and
+files unmodified during the merge.
+
+@node Untracked files
+@chapter Untracked files
+
+you can add a untracked file by typing key @kbd{s}. Type @kbd{k} to
+delete the file.
+
+@node Missing Files
+@chapter Missing Files
+
+This section list the files missing from the repo. Typing @kbd{s} will
+remove the file from the repo. To restore the file type @kbd{k}.
+
+@node Staging and Committing
+@chapter Staging and Committing
+
+@emph{Changes} section will list all the changes in the repo. Using
+monky you can select a subset of your changes and commit it. Type
+@kbd{s} to stage a file. Typing @kbd{S} will stage all files.
+
+@emph{Staged Changes} section will list all the staged changes in the
+repo. Type @kbd{u} to unstage a file. Typing @kbd{U} will unstage all
+the previously staged files.
+
+Once you staged all the necessary files type @kbd{c}. This will pop-up
+a buffer for the commit message. Typing @kbd{C-c C-c} will commit all
+the staged files.
+
+Hg doesn't have any staging area. So staging and unstaging won't make
+any changes to your repo unless you commit.
+
+@node Merged Files
+@chapter Merged Files
+
+After a merge, this section will list the files merged. Typing @kbd{m}
+will mark the file as resolved and @kbd{x} will mark the file as
+unresolved. After a merge, Hg doesn't allows to commit a subset of
+changes. so files can't be staged or unstaged. So committing after a
+merge will commit all the merged and unmodified files during the
+merge.
+
+@node Log
+@chapter Log
+
+Typing @kbd{l} will bring up the log buffer. This will list the commit
+logs of the repo. You can use @kbd{n} and @kbd{p} to move to the
+previous and next commit. Type @kbd{RET} to see the commit information.
+
+@bye

@@ -1,0 +1,129 @@
+Info file: monky.info,    -*-Text-*-
+produced by `texinfo-format-buffer'
+from filebuffer `*--monky.texi--temporary-buffer*'
+using `texinfmt.el' version 2.42 of  7 Jul 2006.
+
+
+
+
+
+File: monky.info, Node: Top, Next: Introduction, Prev: (dir), Up: (dir)
+
+Monky User Manual
+*****************
+
+Monky is an emacs extension, provides an interactive interface for Hg
+
+* Menu:
+
+* Introduction::
+* Status::
+* Untracked files::
+* Missing Files::
+* Staging and Committing::
+* Merged Files::
+* Log::
+
+
+
+
+File: monky.info, Node: Introduction, Next: Status, Prev: Top, Up: Top
+
+Introduction
+************
+
+Monky provides an interactive interface for Hg. Using Monky, your can
+selectively commit files, view the diffs and other things.
+
+
+
+File: monky.info, Node: Status, Next: Untracked files, Prev: Introduction, Up: Top
+
+Status
+******
+
+Running `M-x monky-status' while visiting any file in a repo displays
+the status of the hg repo. The status buffer list down the missing
+files, untracked files and changed files.
+
+During a merge the buffer will show the list of merged files, and
+files unmodified during the merge.
+
+
+
+File: monky.info, Node: Untracked files, Next: Missing Files, Prev: Status, Up: Top
+
+Untracked files
+***************
+
+you can add a untracked file by typing key `s'. Type `k' to delete the
+file.
+
+
+
+File: monky.info, Node: Missing Files, Next: Staging and Committing, Prev: Untracked files, Up: Top
+
+Missing Files
+*************
+
+This section list the files missing from the repo. Typing `s' will
+remove the file from the repo. To restore the file type `k'.
+
+
+
+File: monky.info, Node: Staging and Committing, Next: Merged Files, Prev: Missing Files, Up: Top
+
+Staging and Committing
+**********************
+
+*Changes* section will list all the changes in the repo. Using
+monky you can select a subset of your changes and commit it. Type
+`s' to stage a file. Typing `S' will stage all files.
+
+*Staged Changes* section will list all the staged changes in the
+repo. Type `u' to unstage a file. Typing `U' will unstage all the
+previously staged files.
+
+Once you staged all the necessary files type `c'. This will pop-up a
+buffer for the commit message. Typing `C-c C-c' will commit all the
+staged files.
+
+Hg doesn't have any staging area. So staging and unstaging won't make
+any changes to your repo unless you commit.
+
+
+
+File: monky.info, Node: Merged Files, Next: Log, Prev: Staging and Committing, Up: Top
+
+Merged Files
+************
+
+After a merge, this section will list the files merged. Typing `m'
+will mark the file as resolved and `x' will mark the file as
+unresolved. After a merge, Hg doesn't allows to commit a subset of
+changes. so files can't be staged or unstaged. So committing after a
+merge will commit all the merged and unmodified files during the
+merge.
+
+
+
+File: monky.info, Node: Log, Prev: Merged Files, Up: Top
+
+Log
+***
+
+Typing `l' will bring up the log buffer. This will list the commit
+logs of the repo. You can use `n' and `p' to move to the previous and
+next commit. Type `RET' to see the commit information.
+
+Tag table:
+Node: Top180
+Node: Introduction493
+Node: Status725
+Node: Untracked files1109
+Node: Missing Files1308
+Node: Staging and Committing1570
+Node: Merged Files2326
+Node: Log2781
+
+End tag table
