@@ -115,6 +115,10 @@ Log
 Typing `l' will bring up the log buffer. This will list the commit
 logs of the repo. You can use `n' and `p' to move to the previous and
 next commit. Type `RET' to see the commit information.
+
+Monky will show only `monky-log-cutoff-length' entries. Typing `e'
+will show twice as many entries. `C-u e' will show all entries, and
+given a numeric prefix argument, `e' will add this number of entries.
 
 Tag table:
 Node: Top180

@@ -91,6 +91,12 @@ merge.
 
 Typing @kbd{l} will bring up the log buffer. This will list the commit
 logs of the repo. You can use @kbd{n} and @kbd{p} to move to the
-previous and next commit. Type @kbd{RET} to see the commit information.
+previous and next commit. Type @kbd{RET} to see the commit
+information.
+
+Monky will show only @code{monky-log-cutoff-length} entries. Typing
+@kbd{e} will show twice as many entries. @kbd{C-u e} will show all
+entries, and given a numeric prefix argument, @kbd{e} will add this
+number of entries.
 
 @bye
