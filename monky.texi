@@ -24,6 +24,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 @menu
 * Introduction::
 * Status::
+* Untracked files::
 * Missing Files::
 * Staging and Committing::
 * Merged Files::
