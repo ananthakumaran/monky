@@ -1,0 +1,43 @@
+body {
+    font-family:georgia , "Times New Roman",Times,serif;
+    width : 640px;
+    margin : 0 auto;
+    color:#333;
+    line-height:25px;
+    font-size:16px;
+    position : relative;
+}
+
+a {
+    text-decoration:none;
+    font-style:italic;
+    color:#c30;
+}
+
+.menu a {
+    font-size : 20px;
+    line-height:30px;
+    border-bottom : 1px solid #ccc;
+}
+
+
+ul.menu {
+    position : fixed;
+    top : 10px;
+    right : 10px;
+    list-style : none;
+}
+
+
+code, kbd , .highlight {
+    font-size:16px;
+    font-familiy:Monaco,"Courier New",monospace;
+ }
+
+code, kbd {
+    background-color:#F8F8FF ;
+    border:1px solid #DEDEDE ;
+    color:#444444 ;
+    font-size:90% ;
+    padding:0 0.2em ;
+}

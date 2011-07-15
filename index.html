@@ -1,0 +1,195 @@
+<html lang="en">
+<head>
+<title>Monky User Manual</title>
+<meta http-equiv="Content-Type" content="text/html">
+<meta name="description" content="Monky User Manual">
+<meta name="generator" content="makeinfo 4.13">
+<link title="Top" rel="top" href="#Top">
+<link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
+<!--
+Copyright (C) 2010 Anantha Kumaran.
+
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, with no Front-Cover Texts,
+     and with no Back-Cover Texts.
+   -->
+<meta http-equiv="Content-Style-Type" content="text/css">
+<style type="text/css"><!--
+  pre.display { font-family:inherit }
+  pre.format  { font-family:inherit }
+  pre.smalldisplay { font-family:inherit; font-size:smaller }
+  pre.smallformat  { font-family:inherit; font-size:smaller }
+  pre.smallexample { font-size:smaller }
+  pre.smalllisp    { font-size:smaller }
+  span.sc    { font-variant:small-caps }
+  span.roman { font-family:serif; font-weight:normal; } 
+  span.sansserif { font-family:sans-serif; font-weight:normal; } 
+--></style>
+<link rel="stylesheet" type="text/css" href="http://ananthakumaran.github.com/monky/monky.css">
+</head>
+<body>
+<div class="node">
+<a name="Top"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Introduction">Introduction</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
+
+</div>
+
+<h2 class="unnumbered">Monky User Manual</h2>
+
+<p>Monky is an emacs extension, provides an interactive interface for Hg
+
+<ul class="menu">
+<li><a accesskey="1" href="#Introduction">Introduction</a>
+<li><a accesskey="2" href="#Status">Status</a>
+<li><a accesskey="3" href="#Untracked-files">Untracked files</a>
+<li><a accesskey="4" href="#Missing-Files">Missing Files</a>
+<li><a accesskey="5" href="#Staging-and-Committing">Staging and Committing</a>
+<li><a accesskey="6" href="#Merged-Files">Merged Files</a>
+<li><a accesskey="7" href="#Pushing">Pushing</a>
+<li><a accesskey="8" href="#Log">Log</a>
+</ul>
+
+<div class="node">
+<a name="Introduction"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Status">Status</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Top">Top</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">1 Introduction</h2>
+
+<p>Monky provides an interactive interface for Hg. Using Monky, your can
+selectively commit files, view the diffs and other things.
+
+<div class="node">
+<a name="Status"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Untracked-files">Untracked files</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Introduction">Introduction</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">2 Status</h2>
+
+<p>Running <kbd>M-x monky-status</kbd> while visiting any file in a repo
+displays the status of the hg repo. The status buffer list down the
+missing files, untracked files and changed files.
+
+   <p>During a merge the buffer will show the list of merged files, and
+files unmodified during the merge.
+
+<div class="node">
+<a name="Untracked-files"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Missing-Files">Missing Files</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Status">Status</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">3 Untracked files</h2>
+
+<p>you can add a untracked file by typing key <kbd>s</kbd>. Type <kbd>k</kbd> to
+delete the file.
+
+<div class="node">
+<a name="Missing-Files"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Staging-and-Committing">Staging and Committing</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Untracked-files">Untracked files</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">4 Missing Files</h2>
+
+<p>This section list the files missing from the repo. Typing <kbd>s</kbd> will
+remove the file from the repo. To restore the file type <kbd>k</kbd>.
+
+<div class="node">
+<a name="Staging-and-Committing"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Merged-Files">Merged Files</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Missing-Files">Missing Files</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">5 Staging and Committing</h2>
+
+<p><em>Changes</em> section will list all the changes in the repo. Using
+monky you can select a subset of your changes and commit it. Type
+<kbd>s</kbd> to stage a file. Typing <kbd>S</kbd> will stage all files.
+
+   <p><em>Staged Changes</em> section will list all the staged changes in the
+repo. Type <kbd>u</kbd> to unstage a file. Typing <kbd>U</kbd> will unstage all
+the previously staged files.
+
+   <p>Once you staged all the necessary files type <kbd>c</kbd>. This will pop-up
+a buffer for the commit message. Typing <kbd>C-c C-c</kbd> will commit all
+the staged files.
+
+   <p>Hg doesn't have any staging area. So staging and unstaging won't make
+any changes to your repo unless you commit.
+
+<div class="node">
+<a name="Merged-Files"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Pushing">Pushing</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Staging-and-Committing">Staging and Committing</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">6 Merged Files</h2>
+
+<p>After a merge, this section will list the files merged. Typing <kbd>m</kbd>
+will mark the file as resolved and <kbd>x</kbd> will mark the file as
+unresolved. After a merge, Hg doesn't allows to commit a subset of
+changes. so files can't be staged or unstaged. So committing after a
+merge will commit all the merged and unmodified files during the
+merge.
+
+<div class="node">
+<a name="Pushing"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Log">Log</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Merged-Files">Merged Files</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">7 Pushing</h2>
+
+<p>Typing <kbd>P</kbd> will push the current branch to the default path. The
+destination can be specified, given a prefix argument.
+
+<div class="node">
+<a name="Log"></a>
+<p><hr>
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Pushing">Pushing</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">8 Log</h2>
+
+<p>Typing <kbd>l</kbd> will bring up the log buffer. This will list the commit
+logs of the repo. You can use <kbd>n</kbd> and <kbd>p</kbd> to move to the
+previous and next commit. Type <kbd>RET</kbd> to see the commit
+information.
+
+   <p>Monky will show only <code>monky-log-cutoff-length</code> entries. Typing
+<kbd>e</kbd> will show twice as many entries. <kbd>C-u e</kbd> will show all
+entries, and given a numeric prefix argument, <kbd>e</kbd> will add this
+number of entries.
+
+</body></html>
+
