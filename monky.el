@@ -292,6 +292,12 @@ Many Monky faces inherit from this one by default."
      (make-variable-buffer-local ',name)
      (put ',name 'permanent-local t)))
 
+(defun monky-completing-read (&rest args)
+  (apply (if (null ido-mode)
+	     'completing-read
+	   'ido-completing-read)
+	 args))
+
 (defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
 (defun monky-bug-report (str)
   (message "Unknown error: %s\nPlease file a bug at %s"
@@ -306,6 +312,14 @@ Many Monky faces inherit from this one by default."
     (if (equal (elt str (- (length str) 1)) ?\n)
 	(substring str 0 (- (length str) 1))
       str)))
+
+(defun monky-split-lines (str)
+  (if (string= str "")
+      nil
+    (let ((lines (nreverse (split-string str "\n"))))
+      (if (string= (car lines) "")
+	  (setq lines (cdr lines)))
+      (nreverse lines))))
 
 (defun monky-put-line-property (prop val)
   (put-text-property (line-beginning-position) (line-beginning-position 2)
@@ -370,7 +384,7 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "u") 'monky-unstage-item)
 	(define-key map (kbd "U") 'monky-unstage-all)
 	(define-key map (kbd "c") 'monky-log-edit)
-	(define-key map (kbd "p") 'monky-push)
+	(define-key map (kbd "P") 'monky-push)
 	(define-key map (kbd "f") 'monky-fetch)
 	(define-key map (kbd "k") 'monky-discard-item)
 	(define-key map (kbd "m") 'monky-resolve-item)
@@ -811,7 +825,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 	(and msg (message msg))))
     (setq monky-process nil)
     (monky-set-mode-line-process nil)
-    (if monky-process-client-buffer
+    (if (buffer-live-p monky-process-client-buffer)
 	(with-current-buffer monky-process-client-buffer
 	  (monky-with-refresh
 	    (monky-need-refresh monky-process-client-buffer))))))
@@ -993,6 +1007,11 @@ With a prefix argument, visit in other window."
     ((changes diff)
      (error "Already unstaged"))))
 
+;;; Branch
+
+(defun monky-current-branch ()
+  (monky-hg-string "branch"))
+
 ;;; Updating
 
 (defun monky-fetch ()
@@ -1000,10 +1019,21 @@ With a prefix argument, visit in other window."
   (interactive)
   (monky-run-hg-async "fetch"))
 
+(defun monky-remotes ()
+  (mapcar #'car (monky-hg-config-section "paths")))
+
+(defun monky-read-remote (prompt)
+  (monky-completing-read prompt
+			 (monky-remotes)))
+
 (defun monky-push ()
-  "Run hg push."
+  "Pushes current branch to the default path."
   (interactive)
-  (monky-run-hg-async "push"))
+  (let* ((branch (monky-current-branch))
+	 (remote (if current-prefix-arg
+		     (monky-read-remote (format "Push branch %s to : " branch))
+		   "")))
+    (monky-run-hg-async "push" "--branch" branch remote)))
 
 ;;; Merging
 
@@ -1204,6 +1234,9 @@ before the last command."
 (defun monky-hg-string (&rest args)
   (monky-trim-line (monky-hg-output args)))
 
+(defun monky-hg-lines (&rest args)
+  (monky-split-lines (monky-hg-output args)))
+
 (defun monky-hg-exit-code (&rest args)
   (apply #'process-file monky-hg-executable nil nil nil
 	 (append monky-hg-standard-options args)))
@@ -1235,6 +1268,22 @@ before the last command."
 		   (equal default-directory dir)))
 	  (funcall func)))))
 
+(defun monky-hg-config ()
+  "Return an alist of ((section . key) . value)"
+  (mapcar (lambda (line)
+	    (string-match "^\\([^.]*\\)\.\\([^=]*\\)=\\(.*\\)$" line)
+	    (cons (cons (match-string 1 line)
+			(match-string 2 line))
+		  (match-string 3 line)))
+	  (monky-hg-lines "debugconfig")))
+
+(defun monky-hg-config-section (section)
+  "Return an alist of (name . value) for section"
+  (mapcar (lambda (item)
+	    (cons (cdar item) (cdr item)))
+   (remove-if-not (lambda (item)
+		    (equal section (caar item)))
+		  (monky-hg-config))))
 
 ;;; Washers
 

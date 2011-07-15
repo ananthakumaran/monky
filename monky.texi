@@ -28,6 +28,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Missing Files::
 * Staging and Committing::
 * Merged Files::
+* Pushing::
 * Log::
 @end menu
 
@@ -86,6 +87,12 @@ unresolved. After a merge, Hg doesn't allows to commit a subset of
 changes. so files can't be staged or unstaged. So committing after a
 merge will commit all the merged and unmodified files during the
 merge.
+
+@node Pushing
+@chapter Pushing
+
+Typing @kbd{P} will push the current branch to the default path. The
+destination can be specified, given a prefix argument.
 
 @node Log
 @chapter Log

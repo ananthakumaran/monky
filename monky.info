@@ -22,6 +22,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Missing Files::
 * Staging and Committing::
 * Merged Files::
+* Pushing::
 * Log::
 
 
@@ -93,7 +94,7 @@ any changes to your repo unless you commit.
 
 
 
-File: monky.info, Node: Merged Files, Next: Log, Prev: Staging and Committing, Up: Top
+File: monky.info, Node: Merged Files, Next: Pushing, Prev: Staging and Committing, Up: Top
 
 Merged Files
 ************
@@ -107,7 +108,17 @@ merge.
 
 
 
-File: monky.info, Node: Log, Prev: Merged Files, Up: Top
+File: monky.info, Node: Pushing, Next: Log, Prev: Merged Files, Up: Top
+
+Pushing
+*******
+
+Typing `P' will push the current branch to the default path. The
+destination can be specified, given a prefix argument.
+
+
+
+File: monky.info, Node: Log, Prev: Pushing, Up: Top
 
 Log
 ***
@@ -122,12 +133,13 @@ given a numeric prefix argument, `e' will add this number of entries.
 
 Tag table:
 Node: Top180
-Node: Introduction493
-Node: Status725
-Node: Untracked files1109
-Node: Missing Files1308
-Node: Staging and Committing1570
-Node: Merged Files2326
-Node: Log2781
+Node: Introduction505
+Node: Status737
+Node: Untracked files1121
+Node: Missing Files1320
+Node: Staging and Committing1582
+Node: Merged Files2338
+Node: Pushing2797
+Node: Log3011
 
 End tag table
