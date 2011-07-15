@@ -1,11 +1,12 @@
 body {
     font-family:georgia , "Times New Roman",Times,serif;
     width : 640px;
+    padding-right : 300px;
     margin : 0 auto;
     color:#333;
     line-height:25px;
     font-size:16px;
-    position : relative;
+    position: relative;
 }
 
 a {
@@ -22,9 +23,9 @@ a {
 
 
 ul.menu {
-    position : fixed;
+    padding-left : 650px;
     top : 10px;
-    right : 10px;
+    position : fixed;
     list-style : none;
 }
 
