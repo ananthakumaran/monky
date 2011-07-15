@@ -19,4 +19,4 @@ current status. Look at the [documentation][magit-documentation] for further det
 Heavily borrowed from [Magit][magit]. Thanks to Marius Vollmer.
 
 [magit]: http://github.com/magit/magit
-[magit-documenation]: http://ananthakumaran.github.com/magit/index.html
+[magit-documentation]: http://ananthakumaran.github.com/magit/index.html
