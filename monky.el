@@ -39,6 +39,11 @@
   :group 'monky
   :type '(repeat string))
 
+(defcustom monky-hg-process-environment '("TERM=dumb" "HGPLAIN=" "LANGUAGE=C")
+  "Default environment variables for hg"
+  :group 'monky
+  :type '(repeat string))
+
 ;; TODO
 (defcustom monky-save-some-buffers t
   "Non-nil means that \\[monky-status] will save modified buffers before running.
@@ -275,16 +280,17 @@ Many Monky faces inherit from this one by default."
 
 ;;; Compatibilities
 
-(defalias 'monky-start-process
-  (if (functionp 'start-file-process)
-      'start-file-process
-    'start-process))
-
 (eval-when-compile
   (when (< emacs-major-version 23)
     (defvar line-move-visual nil)))
 
 ;;; Utilities
+
+(defmacro monky-with-process-environment (&rest body)
+  (declare (indent 0))
+  `(let ((process-environment (append monky-hg-process-environment
+				      process-environment)))
+     ,@body))
 
 (defmacro monky-def-permanent-buffer-local (name &optional init-value)
   `(progn
@@ -297,6 +303,16 @@ Many Monky faces inherit from this one by default."
 	     'completing-read
 	   'ido-completing-read)
 	 args))
+
+(defun monky-start-process (&rest args)
+  (monky-with-process-environment
+    (apply (if (functionp 'start-file-process)
+	       'start-file-process
+	     'start-process) args)))
+
+(defun monky-process-file (&rest args)
+  (monky-with-process-environment
+    (apply 'process-file args)))
 
 (defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
 (defun monky-bug-report (str)
@@ -530,7 +546,7 @@ CMD is an external command that will be run with ARGS as arguments"
 		    (if buffer-title
 			(insert (propertize buffer-title 'face 'monky-section-title) "\n"))
 		    (setq body-beg (point))
-		    (apply 'process-file cmd nil t nil args)
+		    (apply 'monky-process-file cmd nil t nil args)
 		    (if (not (eq (char-before) ?\n))
 			(insert "\n"))
 		    (if washer
@@ -802,7 +818,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 	       (monky-need-refresh monky-process-client-buffer))
 	      (t
 	       (setq successp
-		     (equal (apply 'process-file cmd nil buf nil args) 0))
+		     (equal (apply 'monky-process-file cmd nil buf nil args) 0))
 	       (monky-set-mode-line-process nil)
 	       (monky-need-refresh monky-process-client-buffer))))
       (or successp
@@ -1221,7 +1237,7 @@ before the last command."
 ;;; Hg utils
 
 (defun monky-hg-insert (args)
-  (apply #'process-file
+  (apply #'monky-process-file
 	 monky-hg-executable
 	 nil (list t nil) nil
 	 (append monky-hg-standard-options args)))
@@ -1238,7 +1254,7 @@ before the last command."
   (monky-split-lines (monky-hg-output args)))
 
 (defun monky-hg-exit-code (&rest args)
-  (apply #'process-file monky-hg-executable nil nil nil
+  (apply #'monky-process-file monky-hg-executable nil nil nil
 	 (append monky-hg-standard-options args)))
 
 (defun monky-get-root-dir ()
