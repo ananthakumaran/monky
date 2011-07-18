@@ -24,6 +24,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Merged Files::
 * Pushing::
 * Log::
+* Using Hg Directly::
 
 
 
@@ -118,7 +119,7 @@ destination can be specified, given a prefix argument.
 
 
 
-File: monky.info, Node: Log, Prev: Pushing, Up: Top
+File: monky.info, Node: Log, Next: Using Hg Directly, Prev: Pushing, Up: Top
 
 Log
 ***
@@ -130,16 +131,28 @@ next commit. Type `RET' to see the commit information.
 Monky will show only `monky-log-cutoff-length' entries. Typing `e'
 will show twice as many entries. `C-u e' will show all entries, and
 given a numeric prefix argument, `e' will add this number of entries.
+
+
+
+File: monky.info, Node: Using Hg Directly, Prev: Log, Up: Top
+
+Using Hg Directly
+*****************
+
+To run a Hg command directly type `:' and enter the command in the
+minibuffer. This will refresh the status buffer after the execution of
+command.  The output of the command can be viewed by typing `$'.
 
 Tag table:
 Node: Top180
-Node: Introduction505
-Node: Status737
-Node: Untracked files1121
-Node: Missing Files1320
-Node: Staging and Committing1582
-Node: Merged Files2338
-Node: Pushing2797
-Node: Log3011
+Node: Introduction527
+Node: Status759
+Node: Untracked files1143
+Node: Missing Files1342
+Node: Staging and Committing1604
+Node: Merged Files2360
+Node: Pushing2819
+Node: Log3033
+Node: Using Hg Directly3522
 
 End tag table

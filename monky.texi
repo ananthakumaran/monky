@@ -30,6 +30,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Merged Files::
 * Pushing::
 * Log::
+* Using Hg Directly::
 @end menu
 
 @node Introduction
@@ -106,5 +107,12 @@ Monky will show only @code{monky-log-cutoff-length} entries. Typing
 @kbd{e} will show twice as many entries. @kbd{C-u e} will show all
 entries, and given a numeric prefix argument, @kbd{e} will add this
 number of entries.
+
+@node Using Hg Directly
+@chapter Using Hg Directly
+
+To run a Hg command directly type @kbd{:} and enter the command in the
+minibuffer. This will refresh the status buffer after the execution of
+command.  The output of the command can be viewed by typing @kbd{$}.
 
 @bye
