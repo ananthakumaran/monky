@@ -81,6 +81,13 @@ save all modified buffers without asking."
   :group 'monky
   :type 'integer)
 
+(defcustom monky-log-auto-more t
+  "Insert more log entries automatically when moving past the last entry.
+
+Only considered when moving past the last entry with `monky-goto-next-section'."
+  :group 'monky
+  :type 'boolean)
+
 (defgroup monky-faces nil
   "Customize the appearance of Monky"
   :prefix "monky-"
@@ -475,6 +482,10 @@ CMD is an external command that will be run with ARGS as arguments"
 						   section)))
 		   (monky-next-section section))))
     (cond
+     ((and next (eq (monky-section-type next) 'longer))
+      (when monky-log-auto-more
+	(monky-log-show-more-entries)
+	(monky-goto-next-section)))
      (next
       (goto-char (monky-section-beginning next))
       (if (eq monky-submode 'log)
@@ -1522,10 +1533,11 @@ insert a line to tell how to insert more of them"
   (declare (indent 0))
   `(let ((monky-log-count 0))
      (monky-create-buffer-sections
-       ,@body
-       (if (= monky-log-count monky-log-cutoff-length)
+       (monky-with-section 'log nil
+	 ,@body
+	 (if (= monky-log-count monky-log-cutoff-length)
 	   (monky-with-section "longer"  'longer
-	     (insert "type \"e\" to show more logs\n"))))))
+	     (insert "type \"e\" to show more logs\n")))))))
 
 (defun monky-log-show-more-entries (&optional arg)
   "Grow the number of log entries shown.
@@ -1545,14 +1557,13 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-refresh-log-buffer ()
   (monky-create-log-buffer-sections
-    (monky-with-section 'log nil
-      (monky-hg-section nil "Commits"
-                        #'monky-wash-logs
-                        "log"
-			"--config" "extensions.graphlog="
-			"-G"
-			"--limit" (number-to-string monky-log-cutoff-length)
-                        "--template" "{node} {desc|firstline}\n"))))
+    (monky-hg-section nil "Commits"
+		      #'monky-wash-logs
+		      "log"
+		      "--config" "extensions.graphlog="
+		      "-G"
+		      "--limit" (number-to-string monky-log-cutoff-length)
+		      "--template" "{node} {desc|firstline}\n")))
 
 
 ;;; Commit mode
