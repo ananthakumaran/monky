@@ -728,16 +728,11 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (monky-for-all-buffers (lambda ()
 			       (setq mode-line-process pr))))))
 
-;; TODO check
 (defun monky-process-indicator-from-command (comps)
   (if (monky-prefix-p (cons monky-hg-executable monky-hg-standard-options)
 		      comps)
       (setq comps (nthcdr (+ (length monky-hg-standard-options) 1) comps)))
-  (cond ((or (null (cdr comps))
-	     (not (member (car comps) '("remote"))))
-	 (car comps))
-	(t
-	 (concat (car comps) " " (cadr comps)))))
+  (car comps))
 
 (defvar monky-process nil)
 (defvar monky-process-client-buffer nil)
@@ -882,7 +877,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
   (monky-run* (cons cmd args) nil nil nil t input))
 
 (defun monky-display-process ()
-  "Display output from most recent git command."
+  "Display output from most recent hg command."
   (interactive)
   (unless (get-buffer monky-process-buffer-name)
     (error "No Hg commands have run"))
