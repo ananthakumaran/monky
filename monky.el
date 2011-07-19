@@ -1,5 +1,4 @@
 ;;; monky.el -- control Hg from Emacs.
-
 ;; Copyright (C) 2011 Anantha Kumaran.
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
@@ -81,7 +80,6 @@ save all modified buffers without asking."
   :group 'monky
   :type 'integer)
 
-
 (defgroup monky-faces nil
   "Customize the appearance of Monky"
   :prefix "monky-"
@@ -98,16 +96,6 @@ Many Monky faces inherit from this one by default."
 (defface monky-section-title
   '((t :weight bold :inherit monky-header))
   "Face for section titles."
-  :group 'monky-faces)
-
-(defface monky-branch
-  '((t :weight bold :inherit monky-header))
-  "Face for the current branch."
-  :group 'monky-faces)
-
-(defface monky-diff-file-header
-  '((t :inherit monky-header))
-  "Face for diff file header lines."
   :group 'monky-faces)
 
 (defface monky-diff-hunk-header
@@ -136,14 +124,6 @@ Many Monky faces inherit from this one by default."
   "Face for lines in a diff that have been deleted."
   :group 'monky-faces)
 
-(defface monky-log-graph
-  '((((class color) (background light))
-     :foreground "grey11")
-    (((class color) (background dark))
-     :foreground "grey80"))
-  "Face for the graph element of the log output."
-  :group 'monky-faces)
-
 (defface monky-log-sha1
   '((((class color) (background light))
      :foreground "firebrick")
@@ -155,121 +135,6 @@ Many Monky faces inherit from this one by default."
 (defface monky-log-message
   '((t))
   "Face for the message element of the log output."
-  :group 'monky-faces)
-
-(defface monky-item-highlight
-  '((((class color) (background light))
-     :background "gray95")
-    (((class color) (background dark))
-     :background "dim gray"))
-  "Face for highlighting the current item."
-  :group 'monky-faces)
-
-(defface monky-item-mark
-  '((((class color) (background light))
-     :foreground "red")
-    (((class color) (background dark))
-     :foreground "orange"))
-  "Face for highlighting marked item."
-  :group 'monky-faces)
-
-(defface monky-log-tag-label
-  '((((class color) (background light))
-     :background "LightGoldenRod")
-    (((class color) (background dark))
-     :background "DarkGoldenRod"))
-  "Face for hg tag labels shown in log buffer."
-  :group 'monky-faces)
-
-(defface monky-log-head-label-bisect-good
-  '((((class color) (background light))
-     :box t
-     :background "light green"
-     :foreground "dark olive green")
-    (((class color) (background dark))
-     :box t
-     :background "light green"
-     :foreground "dark olive green"))
-  "Face for good bisect refs"
-  :group 'monky-faces)
-
-(defface monky-log-head-label-bisect-bad
-  '((((class color) (background light))
-     :box t
-     :background "IndianRed1"
-     :foreground "IndianRed4")
-    (((class color) (background dark))
-     :box t
-     :background "IndianRed1"
-     :foreground "IndianRed4"))
-  "Face for bad bisect refs"
-  :group 'monky-faces)
-
-(defface monky-log-head-label-remote
-  '((((class color) (background light))
-     :box t
-     :background "Grey85"
-     :foreground "OliveDrab4")
-    (((class color) (background dark))
-     :box t
-     :background "Grey11"
-     :foreground "DarkSeaGreen2"))
-  "Face for remote branch head labels shown in log buffer."
-  :group 'monky-faces)
-
-(defface monky-log-head-label-tags
-  '((((class color) (background light))
-     :box t
-     :background "LemonChiffon1"
-     :foreground "goldenrod4")
-    (((class color) (background dark))
-     :box t
-     :background "LemonChiffon1"
-     :foreground "goldenrod4"))
-  "Face for tag labels shown in log buffer."
-  :group 'monky-faces)
-
-(defface monky-log-head-label-patches
-  '((((class color) (background light))
-     :box t
-     :background "IndianRed1"
-     :foreground "IndianRed4")
-    (((class color) (background dark))
-     :box t
-     :background "IndianRed1"
-     :foreground "IndianRed4"))
-  "Face for Stacked Hg patches"
-  :group 'monky-faces)
-
-
-(defface monky-log-head-label-local
-  '((((class color) (background light))
-     :box t
-     :background "Grey85"
-     :foreground "LightSkyBlue4")
-    (((class color) (background dark))
-     :box t
-     :background "Grey13"
-     :foreground "LightSkyBlue1"))
-  "Face for local branch head labels shown in log buffer."
-  :group 'monky-faces)
-
-(defface monky-log-head-label-default
-  '((((class color) (background light))
-     :box t
-     :background "Grey50")
-    (((class color) (background dark))
-     :box t
-     :background "Grey50"))
-  "Face for unknown ref labels shown in log buffer."
-  :group 'monky-faces)
-
-(defface monky-menu-selected-option
-  '((((class color) (background light))
-     :foreground "red")
-    (((class color) (background dark))
-     :foreground "orange"))
-  "Face for selected options on monky's menu"
   :group 'monky-faces)
 
 (defvar monky-mode-hook nil
