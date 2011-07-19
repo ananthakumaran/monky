@@ -1474,9 +1474,10 @@ before the last command."
 (defvar monky-log-buffer-name "*monky-log*")
 
 
-(defun monky-present-log-line (id message)
+(defun monky-present-log-line (graph id message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
-          " * "
+	  "  "
+	  graph
           (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
@@ -1486,17 +1487,23 @@ before the last command."
     (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
     (monky-log-mode t)))
 
+(defvar monky-log-graph-re "^\\([\\/@o+-|\s]+\s*\\) \\([a-z0-9]\\{40\\}\\)\\(.*\\)$")
 
 (defun monky-wash-log-line ()
-  (if (looking-at "\\([a-z0-9]\\{40\\}\\) \\(.*\\)$")
-      (let ((id (match-string 1))
-            (msg (match-string 2)))
+  (if (looking-at monky-log-graph-re)
+      (let ((graph (match-string 1))
+	    (id (match-string 2))
+	    (msg (match-string 3)))
         (delete-region (point-at-bol) (point-at-eol))
         (monky-with-section id 'commit
-          (insert (monky-present-log-line id msg))
+          (insert (monky-present-log-line graph id msg))
           (monky-set-section-info id)
 	  (when monky-log-count (incf monky-log-count))
-          (forward-line))
+          (forward-line)
+	  (when (looking-at "^\\([\\/@o+-|\s]+\s*\\)$")
+	    (let ((graph (match-string 1)))
+	      (insert "          ")
+	      (forward-line))))
         t)
     nil))
 
@@ -1542,6 +1549,8 @@ With a non numeric prefix ARG, show all entries"
       (monky-hg-section nil "Commits"
                         #'monky-wash-logs
                         "log"
+			"--config" "extensions.graphlog="
+			"-G"
 			"--limit" (number-to-string monky-log-cutoff-length)
                         "--template" "{node} {desc|firstline}\n"))))
 
