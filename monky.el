@@ -54,7 +54,6 @@ save all modified buffers without asking."
 		 (const :tag "Ask" t)
 		 (const :tag "Save without asking" dontask)))
 
-;; TODO
 (defcustom monky-revert-item-confirm t
   "Require acknowledgment before reverting an item."
   :group 'monky
@@ -1069,7 +1068,7 @@ With a prefix argument, visit in other window."
 ;;; Miscellaneous
 
 (defun monky-revert-file (file)
-  (when (yes-or-no-p (format "Revert %s? " file))
+  (when (or (not monky-revert-item-confirm) (yes-or-no-p (format "Revert %s? " file)))
     (monky-run-hg "revert" "--no-backup" file)))
 
 (defun monky-discard-item ()
