@@ -34,7 +34,7 @@
   :group 'monky
   :type 'string)
 
-(defcustom monky-hg-standard-options '("--pager=no")
+(defcustom monky-hg-standard-options '()
   "Standard options when running Hg."
   :group 'monky
   :type '(repeat string))
