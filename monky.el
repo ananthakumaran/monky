@@ -1,4 +1,5 @@
 ;;; monky.el -- control Hg from Emacs.
+
 ;; Copyright (C) 2011 Anantha Kumaran.
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
@@ -39,7 +40,7 @@
   :type '(repeat string))
 
 (defcustom monky-hg-process-environment '("TERM=dumb" "HGPLAIN=" "LANGUAGE=C")
-  "Default environment variables for hg"
+  "Default environment variables for hg."
   :group 'monky
   :type '(repeat string))
 
