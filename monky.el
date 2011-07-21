@@ -1107,16 +1107,30 @@ before the last command."
 
 ;;; Hg utils
 
+(defmacro monky-with-temp-file (file &rest body)
+  "Create a temporary file name, evaluate BODY and delete the file."
+  (declare (indent 1))
+  `(let ((,file (expand-file-name
+		 (make-temp-name "monky-temp-file")
+		 temporary-file-directory)))
+     (unwind-protect
+	 (progn ,@body)
+       (delete-file ,file))))
+
 (defun monky-hg-insert (args)
-  (apply #'monky-process-file
-	 monky-hg-executable
-	 nil (list t nil) nil
-	 (append monky-hg-standard-options args)))
+  (insert (monky-hg-output args)))
 
 (defun monky-hg-output (args)
   (with-output-to-string
     (with-current-buffer standard-output
-      (monky-hg-insert args))))
+      (monky-with-temp-file stderr
+	(unless (eq 0 (apply #'monky-process-file
+			     monky-hg-executable
+			     nil (list t stderr) nil
+			     (append monky-hg-standard-options args)))
+	  (error (with-temp-buffer
+		   (insert-file-contents stderr)
+		   (buffer-string))))))))
 
 (defun monky-hg-string (&rest args)
   (monky-trim-line (monky-hg-output args)))
@@ -1128,6 +1142,7 @@ before the last command."
   (apply #'monky-process-file monky-hg-executable nil nil nil
 	 (append monky-hg-standard-options args)))
 
+;; TODO needs cleanup
 (defun monky-get-root-dir ()
   (let ((root (monky-hg-string "root")))
     (if root
@@ -1484,7 +1499,6 @@ before the last command."
 
 (defvar monky-log-buffer-name "*monky-log*")
 
-
 (defun monky-present-log-line (graph id message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
 	  "  "
@@ -1557,7 +1571,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-refresh-log-buffer ()
   (monky-create-log-buffer-sections
-    (monky-hg-section nil "Commits"
+    (monky-hg-section nil "Commits:"
 		      #'monky-wash-logs
 		      "log"
 		      "--config" "extensions.graphlog="
@@ -1584,7 +1598,7 @@ With a non numeric prefix ARG, show all entries"
   (when (monky-section-p commit)
     (setq commit (monky-section-info commit)))
   (unless (and commit
-	       (eql 0 (monky-hg-exit-code "id" "--rev" commit)))
+	       (eq 0 (monky-hg-exit-code "id" "--rev" commit)))
     (error "%s is not a commit" commit))
   (let ((topdir (monky-get-root-dir))
 	(buffer (get-buffer-create monky-commit-buffer-name)))
