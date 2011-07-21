@@ -1512,7 +1512,7 @@ before the last command."
     (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
     (monky-log-mode t)))
 
-(defvar monky-log-graph-re "^\\([\\/@o+-|\s]+\s*\\) \\([a-z0-9]\\{40\\}\\)\\(.*\\)$")
+(defvar monky-log-graph-re "^\\([-\\/@o+|\s]+\s*\\) \\([a-z0-9]\\{40\\}\\)\\(.*\\)$")
 
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
