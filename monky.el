@@ -106,6 +106,11 @@ Many Monky faces inherit from this one by default."
   "Face for section titles."
   :group 'monky-faces)
 
+(defface monky-branch
+  '((t :weight bold :inherit monky-header))
+  "Face for the current branch."
+  :group 'monky)
+
 (defface monky-diff-hunk-header
   '((t :slant italic :inherit monky-header))
   "Face for diff hunk header lines."
@@ -267,6 +272,7 @@ FUNC should leave point at the end of the modified region"
 
 (setq monky-status-mode-map
       (let ((map (make-keymap)))
+	(define-key map (kbd "b") 'monky-branches)
 	(define-key map (kbd "s") 'monky-stage-item)
 	(define-key map (kbd "S") 'monky-stage-all)
 	(define-key map (kbd "u") 'monky-unstage-item)
@@ -282,6 +288,12 @@ FUNC should leave point at the end of the modified region"
 (setq monky-log-mode-map
       (let ((map (make-keymap)))
 	(define-key map (kbd "e") 'monky-log-show-more-entries)
+	(define-key map (kbd "c") 'monky-checkout-item)
+	map))
+
+(setq monky-branches-mode-map
+      (let ((map (make-keymap)))
+	(define-key map (kbd "c") 'monky-checkout-item)
 	map))
 
 (setq monky-commit-mode-map
@@ -894,11 +906,6 @@ With a prefix argument, visit in other window."
     ((changes diff)
      (error "Already unstaged"))))
 
-;;; Branch
-
-(defun monky-current-branch ()
-  (monky-hg-string "branch"))
-
 ;;; Updating
 
 (defun monky-fetch ()
@@ -921,6 +928,9 @@ With a prefix argument, visit in other window."
 		     (monky-read-remote (format "Push branch %s to : " branch))
 		   "")))
     (monky-run-hg-async "push" "--branch" branch remote)))
+
+(defun monky-checkout (node)
+  (monky-run-hg-async "update" node))
 
 ;;; Merging
 
@@ -1571,7 +1581,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-refresh-log-buffer ()
   (monky-create-log-buffer-sections
-    (monky-hg-section nil "Commits:"
+    (monky-hg-section 'commits "Commits:"
 		      #'monky-wash-logs
 		      "log"
 		      "--config" "extensions.graphlog="
@@ -1623,6 +1633,77 @@ With a non numeric prefix ARG, show all entries"
     (forward-line))
   (when (looking-at "^diff")
     (monky-wash-diffs)))
+
+;;; Branch mode
+(define-minor-mode monky-branches-mode
+  "Minor mode for hg branch.
+
+\\{monky-branches-mode-map}"
+  :group monky
+  :init-value ()
+  :lighter ()
+  :keymap monky-branches-mode-map)
+
+(defvar monky-branches-buffer-name "*monky-branches*")
+
+(defvar monky-branch-re "^\\(.*[^\s]\\)\s* \\([0-9]+\\):\\([0-9a-z]\\{12\\}\\)\\(.*\\)$")
+
+(defvar monky-current-branch-name nil)
+(make-variable-buffer-local 'monky-current-branch-name)
+
+(defun monky-present-branch-line (name rev node status)
+  (concat rev " : "
+	  (propertize node 'face 'monky-log-sha1) " "
+	  (if (equal name monky-current-branch-name)
+	      (propertize name 'face 'monky-branch)
+	    name)
+	  " "
+	  status))
+
+(defun monky-wash-branch-line ()
+  (if (looking-at monky-branch-re)
+      (let ((name (match-string 1))
+	    (rev (match-string 2))
+	    (node (match-string 3))
+	    (status (match-string 4)))
+	(delete-region (point-at-bol) (point-at-eol))
+	(monky-with-section name 'branch
+	  (insert (monky-present-branch-line name rev node status))
+	  (monky-set-section-info node)
+	  (forward-line))
+	t)
+    nil))
+
+(defun monky-wash-branches ()
+  (monky-wash-sequence #'monky-wash-branch-line))
+
+(defun monky-refresh-branches-buffer ()
+  (setq monky-current-branch-name (monky-current-branch))
+  (monky-create-buffer-sections
+    (monky-with-section 'buffer nil
+      (monky-hg-section nil "Branches:"
+			#'monky-wash-branches
+			"branches"))))
+
+(defun monky-current-branch ()
+  (monky-hg-string "branch"))
+
+(defun monky-branches ()
+  (interactive)
+  (let ((topdir (monky-get-root-dir)))
+    (pop-to-buffer monky-branches-buffer-name)
+    (monky-mode-init topdir 'branches #'monky-refresh-branches-buffer)
+    (monky-branches-mode t)))
+
+(defun monky-checkout-item ()
+  "Checkout the revision of the represented by current item."
+  (interactive)
+  (monky-section-action (item info "checkout")
+    ((branch)
+     (monky-checkout info)
+     (monky-need-refresh))
+    ((log commits commit)
+     (monky-checkout info))))
 
 ;;; Log edit mode
 
