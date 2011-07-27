@@ -288,6 +288,7 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "u") 'monky-unstage-item)
 	(define-key map (kbd "U") 'monky-unstage-all)
 	(define-key map (kbd "c") 'monky-log-edit)
+	(define-key map (kbd "C") 'monky-checkout)
 	(define-key map (kbd "P") 'monky-push)
 	(define-key map (kbd "f") 'monky-pull)
 	(define-key map (kbd "F") 'monky-fetch)
@@ -304,7 +305,7 @@ FUNC should leave point at the end of the modified region"
 
 (setq monky-branches-mode-map
       (let ((map (make-keymap)))
-	(define-key map (kbd "c") 'monky-checkout-item)
+	(define-key map (kbd "C") 'monky-checkout-item)
 	map))
 
 (setq monky-commit-mode-map
@@ -943,6 +944,12 @@ With a prefix argument, visit in other window."
   (monky-completing-read prompt
 			 (monky-remotes)))
 
+(defun monky-read-revision (prompt)
+  (let ((revision (read-string prompt)))
+    (unless (monky-hg-revision-p revision)
+      (error "%s is not a revision" revision))
+    revision))
+
 (defun monky-push ()
   "Pushes current branch to the default path."
   (interactive)
@@ -953,6 +960,7 @@ With a prefix argument, visit in other window."
     (monky-run-hg-async "push" "--branch" branch remote)))
 
 (defun monky-checkout (node)
+  (interactive (list (monky-read-revision "Update to : ")))
   (monky-run-hg-async "update" node))
 
 ;;; Merging
@@ -1174,6 +1182,9 @@ before the last command."
 (defun monky-hg-exit-code (&rest args)
   (apply #'monky-process-file monky-hg-executable nil nil nil
 	 (append monky-hg-standard-options args)))
+
+(defun monky-hg-revision-p (revision)
+  (eq 0 (monky-hg-exit-code "identify" "--rev" revision)))
 
 ;; TODO needs cleanup
 (defun monky-get-root-dir ()
@@ -1631,7 +1642,7 @@ With a non numeric prefix ARG, show all entries"
   (when (monky-section-p commit)
     (setq commit (monky-section-info commit)))
   (unless (and commit
-	       (eq 0 (monky-hg-exit-code "id" "--rev" commit)))
+	       (monky-hg-revision-p commit))
     (error "%s is not a commit" commit))
   (let ((topdir (monky-get-root-dir))
 	(buffer (get-buffer-create monky-commit-buffer-name)))
