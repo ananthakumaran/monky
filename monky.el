@@ -289,7 +289,8 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "U") 'monky-unstage-all)
 	(define-key map (kbd "c") 'monky-log-edit)
 	(define-key map (kbd "P") 'monky-push)
-	(define-key map (kbd "f") 'monky-fetch)
+	(define-key map (kbd "f") 'monky-pull)
+	(define-key map (kbd "F") 'monky-fetch)
 	(define-key map (kbd "k") 'monky-discard-item)
 	(define-key map (kbd "m") 'monky-resolve-item)
 	(define-key map (kbd "x") 'monky-unresolve-item)
@@ -926,6 +927,14 @@ With a prefix argument, visit in other window."
 		  monky-incoming-repository)))
     (monky-run-hg-async "fetch" remote
 			"--config" "extensions.fetch=")))
+
+(defun monky-pull ()
+  "Run hg pull."
+  (interactive)
+  (let ((remote (if current-prefix-arg
+		    (monky-read-remote "Pull from : ")
+		  monky-incoming-repository)))
+    (monky-run-hg-async "pull" remote)))
 
 (defun monky-remotes ()
   (mapcar #'car (monky-hg-config-section "paths")))
