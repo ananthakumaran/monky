@@ -300,7 +300,7 @@ FUNC should leave point at the end of the modified region"
 (setq monky-log-mode-map
       (let ((map (make-keymap)))
 	(define-key map (kbd "e") 'monky-log-show-more-entries)
-	(define-key map (kbd "c") 'monky-checkout-item)
+	(define-key map (kbd "C") 'monky-checkout-item)
 	map))
 
 (setq monky-branches-mode-map
