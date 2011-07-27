@@ -68,8 +68,8 @@ save all modified buffers without asking."
   "Popup the process buffer if a command takes longer than this many seconds."
   :group 'monky
   :type '(choice (const :tag "Never" -1)
-                 (const :tag "Immediately" 0)
-                 (integer :tag "After this many seconds")))
+		 (const :tag "Immediately" 0)
+		 (integer :tag "After this many seconds")))
 
 (defcustom monky-log-cutoff-length 100
   "The maximum number of commits to show in the log buffer."
@@ -87,6 +87,16 @@ save all modified buffers without asking."
 Only considered when moving past the last entry with `monky-goto-next-section'."
   :group 'monky
   :type 'boolean)
+
+(defcustom monky-incoming-repository "default"
+  "The repository from which changes are pulled from by default."
+  :group 'monky
+  :type 'string)
+
+(defcustom monky-outgoing-repository ""
+  "The repository to which changes are pushed to by default."
+  :group 'monky
+  :type 'string)
 
 (defgroup monky-faces nil
   "Customize the appearance of Monky"
@@ -911,7 +921,11 @@ With a prefix argument, visit in other window."
 (defun monky-fetch ()
   "Run hg fetch."
   (interactive)
-  (monky-run-hg-async "fetch"))
+  (let ((remote (if current-prefix-arg
+		    (monky-read-remote "Fetch from : ")
+		  monky-incoming-repository)))
+    (monky-run-hg-async "fetch" remote
+			"--config" "extensions.fetch=")))
 
 (defun monky-remotes ()
   (mapcar #'car (monky-hg-config-section "paths")))
@@ -926,7 +940,7 @@ With a prefix argument, visit in other window."
   (let* ((branch (monky-current-branch))
 	 (remote (if current-prefix-arg
 		     (monky-read-remote (format "Push branch %s to : " branch))
-		   "")))
+		   monky-outgoing-repository)))
     (monky-run-hg-async "push" "--branch" branch remote)))
 
 (defun monky-checkout (node)
@@ -1513,7 +1527,7 @@ before the last command."
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
 	  "  "
 	  graph
-          (propertize message 'face 'monky-log-message)))
+	  (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
   (interactive)
@@ -1529,17 +1543,17 @@ before the last command."
       (let ((graph (match-string 1))
 	    (id (match-string 2))
 	    (msg (match-string 3)))
-        (delete-region (point-at-bol) (point-at-eol))
-        (monky-with-section id 'commit
-          (insert (monky-present-log-line graph id msg))
-          (monky-set-section-info id)
+	(delete-region (point-at-bol) (point-at-eol))
+	(monky-with-section id 'commit
+	  (insert (monky-present-log-line graph id msg))
+	  (monky-set-section-info id)
 	  (when monky-log-count (incf monky-log-count))
-          (forward-line)
+	  (forward-line)
 	  (when (looking-at "^\\([\\/@o+-|\s]+\s*\\)$")
 	    (let ((graph (match-string 1)))
 	      (insert "          ")
 	      (forward-line))))
-        t)
+	t)
     nil))
 
 (defun monky-wash-logs ()
