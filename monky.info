@@ -22,7 +22,8 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Missing Files::
 * Staging and Committing::
 * Merged Files::
-* Pushing::
+* Pushing and Pulling::
+* Branch::
 * Log::
 * Using Hg Directly::
 
@@ -95,7 +96,7 @@ any changes to your repo unless you commit.
 
 
 
-File: monky.info, Node: Merged Files, Next: Pushing, Prev: Staging and Committing, Up: Top
+File: monky.info, Node: Merged Files, Next: Pushing and Pulling, Prev: Staging and Committing, Up: Top
 
 Merged Files
 ************
@@ -109,17 +110,28 @@ merge.
 
 
 
-File: monky.info, Node: Pushing, Next: Log, Prev: Merged Files, Up: Top
+File: monky.info, Node: Pushing and Pulling, Next: Branch, Prev: Merged Files, Up: Top
 
-Pushing
-*******
+Pushing and Pulling
+*******************
 
-Typing `P' will push the current branch to the default path. The
-destination can be specified, given a prefix argument.
+Typing `P' to push the current branch, `f' to pull changes from remote
+and `F' to fetch changes from the remote. You can specify the
+source/destination to the previous commands with a prefix argument.
 
 
 
-File: monky.info, Node: Log, Next: Using Hg Directly, Prev: Pushing, Up: Top
+File: monky.info, Node: Branch, Next: Log, Prev: Pushing and Pulling, Up: Top
+
+Branch
+******
+
+Typing `b' will bring up the branch buffer. This will list all the
+branches. You can use `C' to checkout a branch.
+
+
+
+File: monky.info, Node: Log, Next: Using Hg Directly, Prev: Branch, Up: Top
 
 Log
 ***
@@ -145,14 +157,15 @@ command.  The output of the command can be viewed by typing `$'.
 
 Tag table:
 Node: Top180
-Node: Introduction527
-Node: Status759
-Node: Untracked files1143
-Node: Missing Files1342
-Node: Staging and Committing1604
-Node: Merged Files2360
-Node: Pushing2819
-Node: Log3033
-Node: Using Hg Directly3522
+Node: Introduction550
+Node: Status782
+Node: Untracked files1166
+Node: Missing Files1365
+Node: Staging and Committing1627
+Node: Merged Files2383
+Node: Pushing and Pulling2854
+Node: Branch3188
+Node: Log3401
+Node: Using Hg Directly3889
 
 End tag table

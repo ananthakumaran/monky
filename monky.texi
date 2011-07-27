@@ -28,8 +28,9 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Missing Files::
 * Staging and Committing::
 * Merged Files::
-* Pushing::
+* Pushing and Pulling::
 * Log::
+* Branch::
 * Using Hg Directly::
 @end menu
 
@@ -89,11 +90,19 @@ changes. so files can't be staged or unstaged. So committing after a
 merge will commit all the merged and unmodified files during the
 merge.
 
-@node Pushing
-@chapter Pushing
+@node Pushing and Pulling
+@chapter Pushing and Pulling
 
-Typing @kbd{P} will push the current branch to the default path. The
-destination can be specified, given a prefix argument.
+Type @kbd{P} to push the current branch, @kbd{f} to pull changes
+from remote and @kbd{F} to fetch changes from the remote. You can
+specify the source/destination to the previous commands  with a prefix
+argument.
+
+@node Branch
+@chapter Branch
+
+Typing @kbd{b} will bring up the branch buffer. This will list all the
+branches. You can use @kbd{C} to checkout a branch.
 
 @node Log
 @chapter Log
@@ -101,7 +110,7 @@ destination can be specified, given a prefix argument.
 Typing @kbd{l} will bring up the log buffer. This will list the commit
 logs of the repo. You can use @kbd{n} and @kbd{p} to move to the
 previous and next commit. Type @kbd{RET} to see the commit
-information.
+information, @kbd{C} to checkout the commit.
 
 Monky will show only @code{monky-log-cutoff-length} entries. Typing
 @kbd{e} will show twice as many entries. @kbd{C-u e} will show all
