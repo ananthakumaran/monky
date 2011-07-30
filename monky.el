@@ -289,6 +289,7 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "U") 'monky-unstage-all)
 	(define-key map (kbd "c") 'monky-log-edit)
 	(define-key map (kbd "C") 'monky-checkout)
+	(define-key map (kbd "B") 'monky-backout)
 	(define-key map (kbd "P") 'monky-push)
 	(define-key map (kbd "f") 'monky-pull)
 	(define-key map (kbd "F") 'monky-fetch)
@@ -301,6 +302,7 @@ FUNC should leave point at the end of the modified region"
       (let ((map (make-keymap)))
 	(define-key map (kbd "e") 'monky-log-show-more-entries)
 	(define-key map (kbd "C") 'monky-checkout-item)
+	(define-key map (kbd "B") 'monky-backout-item)
 	map))
 
 (setq monky-branches-mode-map
@@ -982,6 +984,24 @@ With a prefix argument, visit in other window."
      (if (eq (monky-diff-item-kind item) 'unresolved)
 	 (monky-run-hg "resolve" "--mark" (monky-diff-item-file item))
        (error "Already resolved")))))
+
+;; History
+
+(defvar monky-backout-client-buffer nil)
+
+(defun monky-backout (revision)
+  "Runs hg backout."
+  (interactive (list (monky-read-revision "Backout : ")))
+  (setq monky-backout-client-buffer (current-buffer)
+	monky-log-edit-info revision)
+  (monky-pop-to-log-edit 'backout))
+
+(defun monky-backout-item ()
+  "Backout the revision represented by current item."
+  (interactive)
+  (monky-section-action (item info "backout")
+    ((log commits commit)
+     (monky-backout info))))
 
 ;;; Miscellaneous
 
@@ -1730,7 +1750,7 @@ With a non numeric prefix ARG, show all entries"
     (monky-branches-mode t)))
 
 (defun monky-checkout-item ()
-  "Checkout the revision of the represented by current item."
+  "Checkout the revision represented by current item."
   (interactive)
   (monky-section-action (item info "checkout")
     ((branch)
@@ -1760,6 +1780,8 @@ With a non numeric prefix ARG, show all entries"
 (define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
 
 (defvar monky-pre-log-edit-window-configuration nil)
+(defvar monky-log-edit-operation nil)
+(defvar monky-log-edit-info nil)
 
 (defun monky-restore-pre-log-edit-window-configuration ()
   (when monky-pre-log-edit-window-configuration
@@ -1770,14 +1792,24 @@ With a non numeric prefix ARG, show all entries"
   "Finish edit and commit."
   (interactive)
   (when (= (buffer-size) 0)
-    (error "No commit message"))
+    (error "No %s message" monky-log-edit-operation))
   (let ((commit-buf (current-buffer)))
-    (with-current-buffer (monky-find-status-buffer default-directory)
-      (apply #'monky-run-async-with-input commit-buf
-	     monky-hg-executable
-	     (append monky-hg-standard-options
-		     (list "commit" "--logfile" "-")
-		     monky-staged-files))))
+    (case monky-log-edit-operation
+      ('commit
+       (with-current-buffer (monky-find-status-buffer default-directory)
+	 (apply #'monky-run-async-with-input commit-buf
+		monky-hg-executable
+		(append monky-hg-standard-options
+			(list "commit" "--logfile" "-")
+			monky-staged-files))))
+      ('backout
+       (with-current-buffer monky-backout-client-buffer
+	 (monky-run-async-with-input commit-buf
+				   monky-hg-executable
+				   "backout"
+				   "--merge"
+				   "--logfile" "-"
+				   monky-log-edit-info)))))
   (erase-buffer)
   (bury-buffer)
   (monky-restore-pre-log-edit-window-configuration))
@@ -1796,18 +1828,19 @@ With a non numeric prefix ARG, show all entries"
   (let ((dir default-directory)
 	(buf (get-buffer-create monky-log-edit-buffer-name)))
     (setq monky-pre-log-edit-window-configuration
-	  (current-window-configuration))
+	  (current-window-configuration)
+	  monky-log-edit-operation operation)
     (pop-to-buffer buf)
     (setq default-directory dir)
     (monky-log-edit-mode)
-    (message "Type C-c C-c to %s (C-c C-k to cancel)." operation)))
+    (message "Type C-c C-c to %s (C-c C-k to cancel)." monky-log-edit-operation)))
 
 (defun monky-log-edit ()
   "Bring up a buffer to allow editing of commit messages."
   (interactive)
   (if (not (or monky-staged-files (monky-merge-p)))
       (error "Nothing staged")
-    (monky-pop-to-log-edit "commit")))
+    (monky-pop-to-log-edit 'commit)))
 
 (provide 'monky)
 
