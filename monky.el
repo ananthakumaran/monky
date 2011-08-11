@@ -963,7 +963,7 @@ With a prefix argument, visit in other window."
 
 (defun monky-checkout (node)
   (interactive (list (monky-read-revision "Update to : ")))
-  (monky-run-hg-async "update" node))
+  (monky-run-hg "update" node))
 
 ;;; Merging
 
@@ -1754,8 +1754,7 @@ With a non numeric prefix ARG, show all entries"
   (interactive)
   (monky-section-action (item info "checkout")
     ((branch)
-     (monky-checkout info)
-     (monky-need-refresh))
+     (monky-checkout info))
     ((log commits commit)
      (monky-checkout info))))
 
