@@ -160,6 +160,30 @@ Many Monky faces inherit from this one by default."
   "Face for the message element of the log output."
   :group 'monky-faces)
 
+(defface monky-queue-positive-guard
+  '((((class color) (background light))
+     :box t
+     :background "light green"
+     :foreground "dark olive green")
+    (((class color) (background dark))
+     :box t
+     :background "light green"
+     :foreground "dark olive green"))
+  "Face for queue postive guards"
+  :group 'monky)
+
+(defface monky-queue-negative-guard
+  '((((class color) (background light))
+     :box t
+     :background "IndianRed1"
+     :foreground "IndianRed4")
+    (((class color) (background dark))
+     :box t
+     :background "IndianRed1"
+     :foreground "IndianRed4"))
+  "Face for queue negative guards"
+  :group 'monky)
+
 (defvar monky-mode-hook nil
   "Hook run by `monky-mode'.")
 
@@ -216,6 +240,14 @@ Many Monky faces inherit from this one by default."
 	(substring str 0 (- (length str) 1))
       str)))
 
+(defun monky-delete-line (&optional end)
+  "Delete the text in current line.
+If END is non-nil, deletes the text including the newline character"
+  (let ((end-point (if end
+		       (1+ (point-at-eol))
+		     (point-at-eol))))
+    (delete-region (point-at-bol) end-point)))
+
 (defun monky-split-lines (str)
   (if (string= str "")
       nil
@@ -235,6 +267,12 @@ Many Monky faces inherit from this one by default."
 	 (car seqs))
 	(t
 	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
+
+(defun monky-parse-args (command)
+  (require 'pcomplete)
+  (car (with-temp-buffer
+	 (insert command)
+	 (pcomplete-parse-buffer-arguments))))
 
 (defun monky-prefix-p (prefix list)
   "Return non-nil if PREFIX is a prefix of LIST.
@@ -278,11 +316,12 @@ FUNC should leave point at the end of the modified region"
 	(define-key map (kbd "$") 'monky-display-process)
 	(define-key map (kbd ":") 'monky-hg-command)
 	(define-key map (kbd "l") 'monky-log)
+	(define-key map (kbd "b") 'monky-branches)
+	(define-key map (kbd "q") 'monky-queue)
 	map))
 
 (setq monky-status-mode-map
       (let ((map (make-keymap)))
-	(define-key map (kbd "b") 'monky-branches)
 	(define-key map (kbd "s") 'monky-stage-item)
 	(define-key map (kbd "S") 'monky-stage-all)
 	(define-key map (kbd "u") 'monky-unstage-item)
@@ -312,6 +351,30 @@ FUNC should leave point at the end of the modified region"
 
 (setq monky-commit-mode-map
       (let ((map (make-keymap)))
+	map))
+
+(setq monky-queue-mode-map
+      (let ((map (make-keymap)))
+	(define-key map (kbd "u") 'monky-qpop-item)
+	(define-key map (kbd "U") 'monky-qpop-all)
+	(define-key map (kbd "s") 'monky-qpush-item)
+	(define-key map (kbd "S") 'monky-qpush-all)
+	(define-key map (kbd "r") 'monky-qrefresh)
+	(define-key map (kbd "R") 'monky-qrename-item)
+	(define-key map (kbd "k") 'monky-qremove-item)
+	(define-key map (kbd "N") 'monky-qnew)
+	(define-key map (kbd "f") 'monky-qfold-item)
+	(define-key map (kbd "G") 'monky-qguard-item)
+	map))
+
+(setq monky-log-edit-mode-map
+      (let ((map (make-sparse-keymap)))
+	(define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
+	(define-key map (kbd "C-c C-k") 'monky-log-edit-cancel-log-message)
+	(define-key map (kbd "C-x C-s")
+	  (lambda ()
+	    (interactive)
+	    (message "Not saved. Use C-c C-c to finalize this commit message.")))
 	map))
 
 ;;; Sections
@@ -788,10 +851,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 (defun monky-hg-command (command)
   "Perform arbitrary Hg COMMAND."
   (interactive "sRun hg like this: ")
-  (require 'pcomplete)
-  (let ((args (car (with-temp-buffer
-		     (insert command)
-		     (pcomplete-parse-buffer-arguments))))
+  (let ((args (monky-parse-args command))
 	(monky-process-popup-time 0))
     (monky-with-refresh
       (monky-run* (append (cons monky-hg-executable
@@ -1268,7 +1328,7 @@ before the last command."
 			  (?U 'unresolved)
 			  (t nil)))
 	       (,file (match-string-no-properties 2)))
-	   (delete-region (point) (+ (line-end-position) 1))
+	   (monky-delete-line t)
 	   ,@body
 	   t)
        nil)))
@@ -1583,7 +1643,7 @@ before the last command."
       (let ((graph (match-string 1))
 	    (id (match-string 2))
 	    (msg (match-string 3)))
-	(delete-region (point-at-bol) (point-at-eol))
+	(monky-delete-line)
 	(monky-with-section id 'commit
 	  (insert (monky-present-log-line graph id msg))
 	  (monky-set-section-info id)
@@ -1720,7 +1780,7 @@ With a non numeric prefix ARG, show all entries"
 	    (rev (match-string 2))
 	    (node (match-string 3))
 	    (status (match-string 4)))
-	(delete-region (point-at-bol) (point-at-eol))
+	(monky-delete-line)
 	(monky-with-section name 'branch
 	  (insert (monky-present-branch-line name rev node status))
 	  (monky-set-section-info node)
@@ -1758,6 +1818,222 @@ With a non numeric prefix ARG, show all entries"
     ((log commits commit)
      (monky-checkout info))))
 
+;;; Queue mode
+(define-minor-mode monky-queue-mode
+  "Minor mode for hg Queue.
+
+\\{monky-queue-mode-map}"
+  :group monky
+  :init-value ()
+  :lighter ()
+  :keymap monky-queue-mode-map)
+
+(defvar monky-queue-buffer-name "*monky-queue*")
+
+(defvar monky-patches-dir ".hg/patches/")
+
+(defun monky-insert-patch (patch)
+  (let ((p (point))
+	(monky-hide-diffs nil))
+    (save-restriction
+      (narrow-to-region p p)
+      (insert-file-contents (concat monky-patches-dir patch))
+      (goto-char (point-max))
+      (if (not (eq (char-before) ?\n))
+	  (insert "\n"))
+      (goto-char p)
+      (while (and (not (eobp)) (not (looking-at "^diff")))
+	(monky-delete-line t))
+      (when (looking-at "^diff")
+	(monky-wash-diffs))
+      (goto-char (point-max)))))
+
+(defun monky-insert-guards (patch)
+  (let ((guards (remove-if
+		 (lambda (guard) (string= "unguarded" guard))
+		 (split-string
+		  (cadr (split-string
+			 (monky-hg-string "qguard" patch
+					  "--config" "extensions.mq=")
+			 ":"))))))
+    (dolist (guard guards)
+      (insert " " (propertize guard
+			      'face
+			      (if (monky-string-starts-with-p guard "+")
+				  'monky-queue-positive-guard
+				'monky-queue-negative-guard))))
+    (insert "\n")))
+
+(defun monky-wash-queue-patch ()
+  (if (looking-at "^\\([^\n]+\\)$")
+      (let ((patch (match-string 1)))
+	(monky-delete-line)
+	(let ((monky-section-hidden-default t))
+	  (monky-with-section patch 'patch
+	    (monky-set-section-info patch)
+	    (insert "\t" patch)
+	    (monky-insert-guards patch)
+	    (monky-insert-patch patch)
+	    (forward-line)))
+	t)
+    nil))
+
+(defun monky-wash-queue-patches ()
+  (monky-wash-sequence #'monky-wash-queue-patch))
+
+;;; Applied Patches
+(defun monky-insert-queue-applied ()
+  (monky-hg-section 'applied "Applied Patches:" #'monky-wash-queue-patches
+		    "qapplied" "--config" "extensions.mq="))
+
+;;; UnApplied Patches
+(defun monky-insert-queue-unapplied ()
+  (monky-hg-section 'unapplied "UnApplied Patches:" #'monky-wash-queue-patches
+		    "qunapplied" "--config" "extensions.mq="))
+
+;;; Series
+(defun monky-insert-queue-series ()
+  (monky-hg-section 'qseries "Series:" #'monky-wash-queue-patches
+		    "qseries" "--config" "extensions.mq="))
+
+(defun monky-wash-active-guards ()
+  (if (looking-at "^no active guards")
+      (monky-delete-line t)
+    (monky-wash-sequence
+     (lambda ()
+       (let ((guard (buffer-substring (point) (point-at-eol))))
+	 (monky-delete-line)
+	 (insert " " (propertize guard 'face 'monky-queue-positive-guard))
+	 (forward-line))))))
+
+
+;;; Active guards
+(defun monky-insert-active-guards ()
+  (monky-hg-section 'active-guards "Active Guards:" #'monky-wash-active-guards
+		    "qselect" "--config" "extensions.mq="))
+
+(defun monky-refresh-queue-buffer ()
+  (monky-create-buffer-sections
+    (monky-with-section 'queue nil
+      (monky-insert-active-guards)
+      (monky-insert-queue-applied)
+      (monky-insert-queue-unapplied)
+      (monky-insert-queue-series))))
+
+(defun monky-queue ()
+  (interactive)
+  (let ((topdir (monky-get-root-dir)))
+    (pop-to-buffer monky-queue-buffer-name)
+    (monky-mode-init topdir 'queue #'monky-refresh-queue-buffer)
+    (monky-queue-mode t)))
+
+(defun monky-qpop (&optional patch)
+  (interactive)
+  (apply #'monky-run-hg
+	 "qpop"
+	 "--config" "extensions.mq="
+	 (if patch (list patch) '())))
+
+(defun monky-qpush (&optional patch)
+  (interactive)
+  (apply #'monky-run-hg
+	 "qpush"
+	 "--config" "extensions.mq="
+	 (if patch (list patch) '())))
+
+(defun monky-qpush-all ()
+  (interactive)
+  (monky-run-hg "qpush" "--all"
+		"--config" "extensions.mq="))
+
+(defun monky-qpop-all ()
+  (interactive)
+  (monky-run-hg "qpop" "--all"
+		"--config" "extensions.mq="))
+
+(defun monky-qrefresh ()
+  (interactive)
+  (monky-run-hg "qrefresh"
+		"--config" "extensions.mq="))
+
+(defun monky-qremove (patch)
+  (monky-run-hg "qremove" patch
+		"--config" "extensions.mq="))
+
+(defun monky-qnew (patch)
+  (interactive (list (read-string "Patch Name : ")))
+  (monky-run-hg "qnew" patch
+		"--config" "extensions.mq="))
+
+(defun monky-qinit ()
+  (interactive)
+  (monky-run-hg "qinit"
+		"--config" "extensions.mq="))
+
+(defun monky-qrename (old-patch &optional new-patch)
+  (let ((new-patch (or new-patch
+		       (read-string "New Patch Name : "))))
+    (monky-run-hg "qrename" old-patch new-patch
+		  "--config" "extensions.mq=")))
+
+(defun monky-qfold (patch)
+  (monky-run-hg "qfold" patch
+		"--config" "extensions.mq="))
+
+(defun monky-qguard (patch)
+  (let ((guards (monky-parse-args (read-string "Guards : "))))
+    (apply #'monky-run-hg "qguard" patch
+	   "--config" "extensions.mq="
+	   "--" guards)))
+
+(defun monky-qselect ()
+  (interactive)
+  (let ((guards (monky-parse-args (read-string "Guards : "))))
+    (apply #'monky-run-hg "qselect"
+	   "--config" "extensions.mq="
+	   guards)))
+
+(defun monky-qpop-item ()
+  (interactive)
+  (monky-section-action (item info "qpop")
+    ((applied patch)
+     (monky-qpop info)
+     (monky-qpop))
+    ((applied)
+     (monky-qpop-all))))
+
+(defun monky-qpush-item ()
+  (interactive)
+  (monky-section-action (item info "qpush")
+    ((unapplied patch)
+     (monky-qpush info))
+    ((unapplied)
+     (monky-qpush-all))))
+
+(defun monky-qremove-item ()
+  (interactive)
+  (monky-section-action (item info "qremove")
+    ((unapplied patch)
+     (monky-qremove info))))
+
+(defun monky-qrename-item ()
+  (interactive)
+  (monky-section-action (item info "qrename")
+    ((patch)
+     (monky-qrename info))))
+
+(defun monky-qfold-item ()
+  (interactive)
+  (monky-section-action (item info "qfold")
+    ((unapplied patch)
+     (monky-qfold info))))
+
+(defun monky-qguard-item ()
+  (interactive)
+  (monky-section-action (item info "qguard")
+    ((patch)
+     (monky-qguard info))))
+
 ;;; Log edit mode
 
 (defvar monky-log-edit-mode-hook nil
@@ -1765,16 +2041,6 @@ With a non numeric prefix ARG, show all entries"
 
 (defvar monky-log-edit-buffer-name "*monky-edit-log*"
   "Buffer name for composing commit messages.")
-
-(setq monky-log-edit-mode-map
-      (let ((map (make-sparse-keymap)))
-	(define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
-	(define-key map (kbd "C-c C-k") 'monky-log-edit-cancel-log-message)
-	(define-key map (kbd "C-x C-s")
-	  (lambda ()
-	    (interactive)
-	    (message "Not saved. Use C-c C-c to finalize this commit message.")))
-	map))
 
 (define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
 
