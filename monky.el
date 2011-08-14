@@ -22,7 +22,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(require 'cl)
 
 (defgroup monky nil
   "Controlling Hg from Emacs."
@@ -260,14 +260,6 @@ If END is non-nil, deletes the text including the newline character"
   (put-text-property (line-beginning-position) (line-beginning-position 2)
 		     prop val))
 
-(defun monky-concat-with-delim (delim seqs)
-  (cond ((null seqs)
-	 nil)
-	((null (cdr seqs))
-	 (car seqs))
-	(t
-	 (concat (car seqs) delim (monky-concat-with-delim delim (cdr seqs))))))
-
 (defun monky-parse-args (command)
   (require 'pcomplete)
   (car (with-temp-buffer
@@ -305,77 +297,77 @@ FUNC should leave point at the end of the modified region"
 
 ;;; Key bindings
 
-(setq monky-mode-map
-      (let ((map (make-keymap)))
-	(suppress-keymap map t)
-	(define-key map (kbd "n") 'monky-goto-next-section)
-	(define-key map (kbd "p") 'monky-goto-previous-section)
-	(define-key map (kbd "RET") 'monky-visit-item)
-	(define-key map (kbd "TAB") 'monky-toggle-section)
-	(define-key map (kbd "g") 'monky-refresh)
-	(define-key map (kbd "$") 'monky-display-process)
-	(define-key map (kbd ":") 'monky-hg-command)
-	(define-key map (kbd "l") 'monky-log)
-	(define-key map (kbd "b") 'monky-branches)
-	(define-key map (kbd "q") 'monky-queue)
-	map))
+(defvar monky-mode-map
+  (let ((map (make-keymap)))
+    (suppress-keymap map t)
+    (define-key map (kbd "n") 'monky-goto-next-section)
+    (define-key map (kbd "p") 'monky-goto-previous-section)
+    (define-key map (kbd "RET") 'monky-visit-item)
+    (define-key map (kbd "TAB") 'monky-toggle-section)
+    (define-key map (kbd "g") 'monky-refresh)
+    (define-key map (kbd "$") 'monky-display-process)
+    (define-key map (kbd ":") 'monky-hg-command)
+    (define-key map (kbd "l") 'monky-log)
+    (define-key map (kbd "b") 'monky-branches)
+    (define-key map (kbd "q") 'monky-queue)
+    map))
 
-(setq monky-status-mode-map
-      (let ((map (make-keymap)))
-	(define-key map (kbd "s") 'monky-stage-item)
-	(define-key map (kbd "S") 'monky-stage-all)
-	(define-key map (kbd "u") 'monky-unstage-item)
-	(define-key map (kbd "U") 'monky-unstage-all)
-	(define-key map (kbd "c") 'monky-log-edit)
-	(define-key map (kbd "C") 'monky-checkout)
-	(define-key map (kbd "B") 'monky-backout)
-	(define-key map (kbd "P") 'monky-push)
-	(define-key map (kbd "f") 'monky-pull)
-	(define-key map (kbd "F") 'monky-fetch)
-	(define-key map (kbd "k") 'monky-discard-item)
-	(define-key map (kbd "m") 'monky-resolve-item)
-	(define-key map (kbd "x") 'monky-unresolve-item)
-	map))
+(defvar monky-status-mode-map
+  (let ((map (make-keymap)))
+    (define-key map (kbd "s") 'monky-stage-item)
+    (define-key map (kbd "S") 'monky-stage-all)
+    (define-key map (kbd "u") 'monky-unstage-item)
+    (define-key map (kbd "U") 'monky-unstage-all)
+    (define-key map (kbd "c") 'monky-log-edit)
+    (define-key map (kbd "C") 'monky-checkout)
+    (define-key map (kbd "B") 'monky-backout)
+    (define-key map (kbd "P") 'monky-push)
+    (define-key map (kbd "f") 'monky-pull)
+    (define-key map (kbd "F") 'monky-fetch)
+    (define-key map (kbd "k") 'monky-discard-item)
+    (define-key map (kbd "m") 'monky-resolve-item)
+    (define-key map (kbd "x") 'monky-unresolve-item)
+    map))
 
-(setq monky-log-mode-map
-      (let ((map (make-keymap)))
-	(define-key map (kbd "e") 'monky-log-show-more-entries)
-	(define-key map (kbd "C") 'monky-checkout-item)
-	(define-key map (kbd "B") 'monky-backout-item)
-	map))
+(defvar monky-log-mode-map
+  (let ((map (make-keymap)))
+    (define-key map (kbd "e") 'monky-log-show-more-entries)
+    (define-key map (kbd "C") 'monky-checkout-item)
+    (define-key map (kbd "B") 'monky-backout-item)
+    map))
 
-(setq monky-branches-mode-map
-      (let ((map (make-keymap)))
-	(define-key map (kbd "C") 'monky-checkout-item)
-	map))
+(defvar monky-branches-mode-map
+  (let ((map (make-keymap)))
+    (define-key map (kbd "C") 'monky-checkout-item)
+    map))
 
-(setq monky-commit-mode-map
-      (let ((map (make-keymap)))
-	map))
+(defvar monky-commit-mode-map
+  (let ((map (make-keymap)))
+    map))
 
-(setq monky-queue-mode-map
-      (let ((map (make-keymap)))
-	(define-key map (kbd "u") 'monky-qpop-item)
-	(define-key map (kbd "U") 'monky-qpop-all)
-	(define-key map (kbd "s") 'monky-qpush-item)
-	(define-key map (kbd "S") 'monky-qpush-all)
-	(define-key map (kbd "r") 'monky-qrefresh)
-	(define-key map (kbd "R") 'monky-qrename-item)
-	(define-key map (kbd "k") 'monky-qremove-item)
-	(define-key map (kbd "N") 'monky-qnew)
-	(define-key map (kbd "f") 'monky-qfold-item)
-	(define-key map (kbd "G") 'monky-qguard-item)
-	map))
+(defvar monky-queue-mode-map
+  (let ((map (make-keymap)))
+    (define-key map (kbd "u") 'monky-qpop-item)
+    (define-key map (kbd "U") 'monky-qpop-all)
+    (define-key map (kbd "s") 'monky-qpush-item)
+    (define-key map (kbd "S") 'monky-qpush-all)
+    (define-key map (kbd "r") 'monky-qrefresh)
+    (define-key map (kbd "R") 'monky-qrename-item)
+    (define-key map (kbd "k") 'monky-qremove-item)
+    (define-key map (kbd "N") 'monky-qnew)
+    (define-key map (kbd "f") 'monky-qfold-item)
+    (define-key map (kbd "G") 'monky-qguard-item)
+    map))
 
-(setq monky-log-edit-mode-map
-      (let ((map (make-sparse-keymap)))
-	(define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
-	(define-key map (kbd "C-c C-k") 'monky-log-edit-cancel-log-message)
-	(define-key map (kbd "C-x C-s")
-	  (lambda ()
-	    (interactive)
-	    (message "Not saved. Use C-c C-c to finalize this commit message.")))
-	map))
+(defvar monky-log-edit-mode-map
+  (let ((map (make-sparse-keymap)))
+    (define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
+    (define-key map (kbd "C-c C-k") 'monky-log-edit-cancel-log-message)
+    (define-key map (kbd "C-x C-s")
+      (lambda ()
+	(interactive)
+	(message "Not saved. Use C-c C-c to finalize this commit message.")))
+    map))
 
 ;;; Sections
 
@@ -730,7 +722,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 	    (goto-char (point-max))
 	  (erase-buffer))
 	(insert "$ " (or logline
-			 (monky-concat-with-delim " " cmd-and-args))
+			 (mapconcat #'identity cmd-and-args " "))
 		"\n")
 	(cond (nowait
 	       (setq monky-process
@@ -832,7 +824,9 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 			args))))
 
 (defun monky-run-hg-async (&rest args)
-  (message "Running %s %s" monky-hg-executable (mapconcat 'identity args " "))
+  (message "Running %s %s"
+	   monky-hg-executable
+	   (mapconcat #'identity args " "))
   (monky-run* (append (cons monky-hg-executable
 			    monky-hg-standard-options)
 		      args)
@@ -1017,7 +1011,8 @@ With a prefix argument, visit in other window."
   (interactive)
   (let* ((branch (monky-current-branch))
 	 (remote (if current-prefix-arg
-		     (monky-read-remote (format "Push branch %s to : " branch))
+		     (monky-read-remote
+		      (format "Push branch %s to : " branch))
 		   monky-outgoing-repository)))
     (monky-run-hg-async "push" "--branch" branch remote)))
 
@@ -1732,7 +1727,7 @@ With a non numeric prefix ARG, show all entries"
 		       #'monky-refresh-commit-buffer commit)
       (monky-commit-mode t))
     (if select
-	(pop-to-buffer buf))))
+	(pop-to-buffer buffer))))
 
 (defun monky-refresh-commit-buffer (commit)
   (monky-create-buffer-sections
