@@ -52,6 +52,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
 <li><a accesskey="7" href="#Pushing-and-Pulling">Pushing and Pulling</a>
 <li><a accesskey="8" href="#Log">Log</a>
 <li><a accesskey="9" href="#Branch">Branch</a>
+<li><a href="#Queue">Queue</a>
 <li><a href="#Using-Hg-Directly">Using Hg Directly</a>
 </ul>
 
@@ -178,7 +179,7 @@ argument.
 <div class="node">
 <a name="Branch"></a>
 <p><hr>
-Next:&nbsp;<a rel="next" accesskey="n" href="#Using-Hg-Directly">Using Hg Directly</a>,
+Next:&nbsp;<a rel="next" accesskey="n" href="#Queue">Queue</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Log">Log</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
@@ -190,6 +191,44 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 branches. You can use <kbd>C</kbd> to checkout a branch.
 
 <div class="node">
+<a name="Queue"></a>
+<p><hr>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Using-Hg-Directly">Using Hg Directly</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Branch">Branch</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">9 Queue</h2>
+
+<p>Use <kbd>M-x monky-queue</kbd> or <kbd>q</kbd> from the status buffer to view
+the queue buffer. The queue buffer will list the <em>Applied
+Patches</em>, <em>UnApplied Patches</em> and the <em>Series</em>.
+
+   <p><table summary=""><tr align="left"><th valign="top" width="15%">Key </th><th valign="top" width="85%">Description
+<br></th></tr><tr align="left"><td valign="top" width="15%">u
+</td><td valign="top" width="85%">pop the selected patch and all the patches before it
+<br></td></tr><tr align="left"><td valign="top" width="15%">U
+</td><td valign="top" width="85%">pop all the applied patches
+<br></td></tr><tr align="left"><td valign="top" width="15%">s
+</td><td valign="top" width="85%">push the selected patch and all the patches before it
+<br></td></tr><tr align="left"><td valign="top" width="15%">S
+</td><td valign="top" width="85%">push all the unapplied patches
+<br></td></tr><tr align="left"><td valign="top" width="15%">r
+</td><td valign="top" width="85%">refresh(update) the current patch with the changes in working directory
+<br></td></tr><tr align="left"><td valign="top" width="15%">R
+</td><td valign="top" width="85%">rename the selected patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">k
+</td><td valign="top" width="85%">remove the selected patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">N
+</td><td valign="top" width="85%">create a new patch on top of current patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">f
+</td><td valign="top" width="85%">fold the selected patch into the current patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">G
+</td><td valign="top" width="85%">reset the guards of the selected patch with new guards
+   <br></td></tr></table>
+
+<div class="node">
 <a name="Log"></a>
 <p><hr>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Branch">Branch</a>,
@@ -198,7 +237,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">9 Log</h2>
+<h2 class="chapter">10 Log</h2>
 
 <p>Typing <kbd>l</kbd> will bring up the log buffer. This will list the commit
 logs of the repo. You can use <kbd>n</kbd> and <kbd>p</kbd> to move to the
@@ -213,12 +252,12 @@ number of entries.
 <div class="node">
 <a name="Using-Hg-Directly"></a>
 <p><hr>
-Previous:&nbsp;<a rel="previous" accesskey="p" href="#Branch">Branch</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Queue">Queue</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">10 Using Hg Directly</h2>
+<h2 class="chapter">11 Using Hg Directly</h2>
 
 <p>To run a Hg command directly type <kbd>:</kbd> and enter the command in the
 minibuffer. This will refresh the status buffer after the execution of
