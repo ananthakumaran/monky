@@ -31,6 +31,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Pushing and Pulling::
 * Log::
 * Branch::
+* Queue::
 * Using Hg Directly::
 @end menu
 
@@ -103,6 +104,38 @@ argument.
 
 Typing @kbd{b} will bring up the branch buffer. This will list all the
 branches. You can use @kbd{C} to checkout a branch.
+
+@node Queue
+@chapter Queue
+
+Use @kbd{M-x monky-queue} or @kbd{q} from the status buffer to view
+the queue buffer. The queue buffer will list the @emph{Applied
+Patches}, @emph{UnApplied Patches} and the @emph{Series}.
+
+@multitable @columnfractions .15 .85
+@headitem Key @tab Description
+@item u
+@tab pop the selected patch and all the patches before it
+@item U
+@tab pop all the applied patches
+@item s
+@tab push the selected patch and all the patches before it
+@item S
+@tab push all the unapplied patches
+@item r
+@tab refresh(update) the current patch with the changes in working directory
+@item R
+@tab rename the selected patch
+@item k
+@tab remove the selected patch
+@item N
+@tab create a new patch on top of current patch
+@item f
+@tab fold the selected patch into the current patch
+@item G
+@tab reset the guards of the selected patch with new guards
+@end multitable
+
 
 @node Log
 @chapter Log

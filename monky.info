@@ -1,13 +1,15 @@
-Info file: monky.info,    -*-Text-*-
-produced by `texinfo-format-buffer'
-from filebuffer `*--monky.texi--temporary-buffer*'
-using `texinfmt.el' version 2.42 of  7 Jul 2006.
+This is monky.info, produced by makeinfo version 4.13 from monky.texi.
 
+Copyright (C) 2010 Anantha Kumaran.
 
-
+     Permission is granted to copy, distribute and/or modify this
+     document under the terms of the GNU Free Documentation License,
+     Version 1.2 or any later version published by the Free Software
+     Foundation; with no Invariant Sections, with no Front-Cover Texts,
+     and with no Back-Cover Texts.
 
 
-File: monky.info, Node: Top, Next: Introduction, Prev: (dir), Up: (dir)
+File: monky.info,  Node: Top,  Next: Introduction,  Up: (dir)
 
 Monky User Manual
 *****************
@@ -23,149 +25,166 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Staging and Committing::
 * Merged Files::
 * Pushing and Pulling::
-* Branch::
 * Log::
+* Branch::
+* Queue::
 * Using Hg Directly::
 
-
-
 
-File: monky.info, Node: Introduction, Next: Status, Prev: Top, Up: Top
+File: monky.info,  Node: Introduction,  Next: Status,  Prev: Top,  Up: Top
 
-Introduction
-************
+1 Introduction
+**************
 
 Monky provides an interactive interface for Hg. Using Monky, your can
 selectively commit files, view the diffs and other things.
 
-
 
-File: monky.info, Node: Status, Next: Untracked files, Prev: Introduction, Up: Top
+File: monky.info,  Node: Status,  Next: Untracked files,  Prev: Introduction,  Up: Top
 
-Status
-******
+2 Status
+********
 
 Running `M-x monky-status' while visiting any file in a repo displays
 the status of the hg repo. The status buffer list down the missing
 files, untracked files and changed files.
 
-During a merge the buffer will show the list of merged files, and
+   During a merge the buffer will show the list of merged files, and
 files unmodified during the merge.
 
-
 
-File: monky.info, Node: Untracked files, Next: Missing Files, Prev: Status, Up: Top
+File: monky.info,  Node: Untracked files,  Next: Missing Files,  Prev: Status,  Up: Top
 
-Untracked files
-***************
+3 Untracked files
+*****************
 
 you can add a untracked file by typing key `s'. Type `k' to delete the
 file.
 
-
 
-File: monky.info, Node: Missing Files, Next: Staging and Committing, Prev: Untracked files, Up: Top
+File: monky.info,  Node: Missing Files,  Next: Staging and Committing,  Prev: Untracked files,  Up: Top
 
-Missing Files
-*************
+4 Missing Files
+***************
 
 This section list the files missing from the repo. Typing `s' will
 remove the file from the repo. To restore the file type `k'.
 
-
 
-File: monky.info, Node: Staging and Committing, Next: Merged Files, Prev: Missing Files, Up: Top
+File: monky.info,  Node: Staging and Committing,  Next: Merged Files,  Prev: Missing Files,  Up: Top
 
-Staging and Committing
-**********************
+5 Staging and Committing
+************************
 
-*Changes* section will list all the changes in the repo. Using
-monky you can select a subset of your changes and commit it. Type
-`s' to stage a file. Typing `S' will stage all files.
+_Changes_ section will list all the changes in the repo. Using monky
+you can select a subset of your changes and commit it. Type `s' to
+stage a file. Typing `S' will stage all files.
 
-*Staged Changes* section will list all the staged changes in the
+   _Staged Changes_ section will list all the staged changes in the
 repo. Type `u' to unstage a file. Typing `U' will unstage all the
 previously staged files.
 
-Once you staged all the necessary files type `c'. This will pop-up a
+   Once you staged all the necessary files type `c'. This will pop-up a
 buffer for the commit message. Typing `C-c C-c' will commit all the
 staged files.
 
-Hg doesn't have any staging area. So staging and unstaging won't make
+   Hg doesn't have any staging area. So staging and unstaging won't make
 any changes to your repo unless you commit.
 
+
+File: monky.info,  Node: Merged Files,  Next: Pushing and Pulling,  Prev: Staging and Committing,  Up: Top
+
+6 Merged Files
+**************
+
+After a merge, this section will list the files merged. Typing `m' will
+mark the file as resolved and `x' will mark the file as unresolved.
+After a merge, Hg doesn't allows to commit a subset of changes. so
+files can't be staged or unstaged. So committing after a merge will
+commit all the merged and unmodified files during the merge.
 
 
-File: monky.info, Node: Merged Files, Next: Pushing and Pulling, Prev: Staging and Committing, Up: Top
+File: monky.info,  Node: Pushing and Pulling,  Next: Log,  Prev: Merged Files,  Up: Top
 
-Merged Files
-************
+7 Pushing and Pulling
+*********************
 
-After a merge, this section will list the files merged. Typing `m'
-will mark the file as resolved and `x' will mark the file as
-unresolved. After a merge, Hg doesn't allows to commit a subset of
-changes. so files can't be staged or unstaged. So committing after a
-merge will commit all the merged and unmodified files during the
-merge.
-
-
-
-File: monky.info, Node: Pushing and Pulling, Next: Branch, Prev: Merged Files, Up: Top
-
-Pushing and Pulling
-*******************
-
-Typing `P' to push the current branch, `f' to pull changes from remote
+Type `P' to push the current branch, `f' to pull changes from remote
 and `F' to fetch changes from the remote. You can specify the
-source/destination to the previous commands with a prefix argument.
-
+source/destination to the previous commands  with a prefix argument.
 
 
-File: monky.info, Node: Branch, Next: Log, Prev: Pushing and Pulling, Up: Top
+File: monky.info,  Node: Branch,  Next: Queue,  Prev: Log,  Up: Top
 
-Branch
-******
+8 Branch
+********
 
 Typing `b' will bring up the branch buffer. This will list all the
 branches. You can use `C' to checkout a branch.
 
+
+File: monky.info,  Node: Queue,  Next: Using Hg Directly,  Prev: Branch,  Up: Top
+
+9 Queue
+*******
+
+Use `M-x monky-queue' or `q' from the status buffer to view the queue
+buffer. The queue buffer will list the _Applied Patches_, _UnApplied
+Patches_ and the _Series_.
+
+Key         Description
+-------------------------------------------------------------------------- 
+u           pop the selected patch and all the patches before it
+U           pop all the applied patches
+s           push the selected patch and all the patches before it
+S           push all the unapplied patches
+r           refresh(update) the current patch with the changes in
+            working directory
+R           rename the selected patch
+k           remove the selected patch
+N           create a new patch on top of current patch
+f           fold the selected patch into the current patch
+G           reset the guards of the selected patch with new guards
 
 
-File: monky.info, Node: Log, Next: Using Hg Directly, Prev: Branch, Up: Top
+File: monky.info,  Node: Log,  Next: Branch,  Prev: Pushing and Pulling,  Up: Top
 
-Log
-***
+10 Log
+******
 
-Typing `l' will bring up the log buffer. This will list the commit
-logs of the repo. You can use `n' and `p' to move to the previous and
-next commit. Type `RET' to see the commit information.
+Typing `l' will bring up the log buffer. This will list the commit logs
+of the repo. You can use `n' and `p' to move to the previous and next
+commit. Type `RET' to see the commit information, `C' to checkout the
+commit.
 
-Monky will show only `monky-log-cutoff-length' entries. Typing `e'
+   Monky will show only `monky-log-cutoff-length' entries. Typing `e'
 will show twice as many entries. `C-u e' will show all entries, and
 given a numeric prefix argument, `e' will add this number of entries.
 
-
 
-File: monky.info, Node: Using Hg Directly, Prev: Log, Up: Top
+File: monky.info,  Node: Using Hg Directly,  Prev: Queue,  Up: Top
 
-Using Hg Directly
-*****************
+11 Using Hg Directly
+********************
 
 To run a Hg command directly type `:' and enter the command in the
 minibuffer. This will refresh the status buffer after the execution of
 command.  The output of the command can be viewed by typing `$'.
-
-Tag table:
-Node: Top180
-Node: Introduction550
-Node: Status782
-Node: Untracked files1166
-Node: Missing Files1365
-Node: Staging and Committing1627
-Node: Merged Files2383
-Node: Pushing and Pulling2854
-Node: Branch3188
-Node: Log3401
-Node: Using Hg Directly3889
+
+
 
-End tag table
+Tag Table:
+Node: Top421
+Node: Introduction789
+Node: Status1028
+Node: Untracked files1422
+Node: Missing Files1628
+Node: Staging and Committing1897
+Node: Merged Files2669
+Node: Pushing and Pulling3147
+Node: Branch3484
+Node: Queue3690
+Node: Log4627
+Node: Using Hg Directly5157
+
+End Tag Table
