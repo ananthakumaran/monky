@@ -203,6 +203,10 @@ Many Monky faces inherit from this one by default."
 				      process-environment)))
      ,@body))
 
+(defmacro monky-with-refresh (&rest body)
+  (declare (indent 0))
+  `(monky-refresh-wrapper (lambda () ,@body)))
+
 (defmacro monky-def-permanent-buffer-local (name &optional init-value)
   `(progn
      (defvar ,name ,init-value)
@@ -855,11 +859,6 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 
 ;;; Actions
 
-(defmacro monky-section-action (head &rest clauses)
-  (declare (indent 1))
-  `(monky-with-refresh
-     (monky-section-case ,head ,@clauses)))
-
 (defmacro monky-section-case (head &rest clauses)
   "Make different action depending of current section.
 
@@ -904,6 +903,11 @@ and throws an error otherwise."
 		    (error "Can't %s as %s"
 			   ,opname
 			   ,type))))))))
+
+(defmacro monky-section-action (head &rest clauses)
+  (declare (indent 1))
+  `(monky-with-refresh
+     (monky-section-case ,head ,@clauses)))
 
 (defun monky-visit-item (&optional other-window)
   "Visit current item.
@@ -1097,10 +1101,6 @@ With a prefix argument, visit in other window."
 
 (defvar monky-refresh-needing-buffers nil)
 (defvar monky-refresh-pending nil)
-
-(defmacro monky-with-refresh (&rest body)
-  (declare (indent 0))
-  `(monky-refresh-wrapper (lambda () ,@body)))
 
 (defun monky-refresh-wrapper (func)
   (if monky-refresh-pending
