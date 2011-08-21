@@ -360,6 +360,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "k") 'monky-qremove-item)
     (define-key map (kbd "N") 'monky-qnew)
     (define-key map (kbd "f") 'monky-qfold-item)
+    (define-key map (kbd "F") 'monky-qfinish-item)
     (define-key map (kbd "G") 'monky-qguard-item)
     map))
 
@@ -1046,14 +1047,10 @@ With a prefix argument, visit in other window."
 
 ;; History
 
-(defvar monky-backout-client-buffer nil)
-
 (defun monky-backout (revision)
   "Runs hg backout."
   (interactive (list (monky-read-revision "Backout : ")))
-  (setq monky-backout-client-buffer (current-buffer)
-	monky-log-edit-info revision)
-  (monky-pop-to-log-edit 'backout))
+  (monky-pop-to-log-edit 'backout revision))
 
 (defun monky-backout-item ()
   "Backout the revision represented by current item."
@@ -1957,8 +1954,10 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-qnew (patch)
   (interactive (list (read-string "Patch Name : ")))
-  (monky-run-hg "qnew" patch
-		"--config" "extensions.mq="))
+  (if (not current-prefix-arg)
+      (monky-run-hg "qnew" patch
+		    "--config" "extensions.mq=")
+    (monky-pop-to-log-edit 'qnew patch)))
 
 (defun monky-qinit ()
   (interactive)
@@ -1987,6 +1986,10 @@ With a non numeric prefix ARG, show all entries"
     (apply #'monky-run-hg "qselect"
 	   "--config" "extensions.mq="
 	   guards)))
+
+(defun monky-qfinish (patch)
+  (monky-run-hg "qfinish" patch
+		"--config" "extensions.mq="))
 
 (defun monky-qpop-item ()
   (interactive)
@@ -2029,6 +2032,12 @@ With a non numeric prefix ARG, show all entries"
     ((patch)
      (monky-qguard info))))
 
+(defun monky-qfinish-item ()
+  (interactive)
+  (monky-section-action (item info "qfinish")
+    ((applied patch)
+     (monky-qfinish info))))
+
 ;;; Log edit mode
 
 (defvar monky-log-edit-mode-hook nil
@@ -2040,6 +2049,7 @@ With a non numeric prefix ARG, show all entries"
 (define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
 
 (defvar monky-pre-log-edit-window-configuration nil)
+(defvar monky-log-edit-client-buffer nil)
 (defvar monky-log-edit-operation nil)
 (defvar monky-log-edit-info nil)
 
@@ -2063,13 +2073,20 @@ With a non numeric prefix ARG, show all entries"
 			(list "commit" "--logfile" "-")
 			monky-staged-files))))
       ('backout
-       (with-current-buffer monky-backout-client-buffer
+       (with-current-buffer monky-log-edit-client-buffer
 	 (monky-run-async-with-input commit-buf
 				   monky-hg-executable
 				   "backout"
 				   "--merge"
 				   "--logfile" "-"
-				   monky-log-edit-info)))))
+				   monky-log-edit-info)))
+      ('qnew
+       (with-current-buffer monky-log-edit-client-buffer
+	 (monky-run-async-with-input commit-buf
+				     monky-hg-executable
+				     "qnew" monky-log-edit-info
+				     "--config" "extensions.mq="
+				     "--logfile" "-")))))
   (erase-buffer)
   (bury-buffer)
   (monky-restore-pre-log-edit-window-configuration))
@@ -2084,12 +2101,14 @@ With a non numeric prefix ARG, show all entries"
     (bury-buffer)
     (monky-restore-pre-log-edit-window-configuration)))
 
-(defun monky-pop-to-log-edit (operation)
+(defun monky-pop-to-log-edit (operation &optional info)
   (let ((dir default-directory)
 	(buf (get-buffer-create monky-log-edit-buffer-name)))
     (setq monky-pre-log-edit-window-configuration
 	  (current-window-configuration)
-	  monky-log-edit-operation operation)
+	  monky-log-edit-operation operation
+	  monky-log-edit-client-buffer (current-buffer)
+	  monky-log-edit-info info)
     (pop-to-buffer buf)
     (setq default-directory dir)
     (monky-log-edit-mode)

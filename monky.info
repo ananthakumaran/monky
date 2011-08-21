@@ -1,4 +1,4 @@
-This is monky.info, produced by makeinfo version 4.13 from monky.texi.
+This is monky.info, produced by makeinfo version 4.11 from monky.texi.
 
 Copyright (C) 2010 Anantha Kumaran.
 
@@ -143,7 +143,10 @@ r           refresh(update) the current patch with the changes in
 R           rename the selected patch
 k           remove the selected patch
 N           create a new patch on top of current patch
+C-u N       same as N except this will also read the commit message for
+            the patch
 f           fold the selected patch into the current patch
+F           apply(qfinish) the selected patch into repo history
 G           reset the guards of the selected patch with new guards
 
 
@@ -184,7 +187,7 @@ Node: Merged Files2669
 Node: Pushing and Pulling3147
 Node: Branch3484
 Node: Queue3690
-Node: Log4627
-Node: Using Hg Directly5157
+Node: Log4785
+Node: Using Hg Directly5315
 
 End Tag Table
