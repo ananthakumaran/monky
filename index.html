@@ -3,7 +3,7 @@
 <title>Monky User Manual</title>
 <meta http-equiv="Content-Type" content="text/html">
 <meta name="description" content="Monky User Manual">
-<meta name="generator" content="makeinfo 4.13">
+<meta name="generator" content="makeinfo 4.11">
 <link title="Top" rel="top" href="#Top">
 <link href="http://www.gnu.org/software/texinfo/" rel="generator-home" title="Texinfo Homepage">
 <!--
@@ -31,8 +31,8 @@ Copyright (C) 2010 Anantha Kumaran.
 </head>
 <body>
 <div class="node">
-<a name="Top"></a>
 <p><hr>
+<a name="Top"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Introduction">Introduction</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
 
@@ -57,8 +57,8 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
 </ul>
 
 <div class="node">
-<a name="Introduction"></a>
 <p><hr>
+<a name="Introduction"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Status">Status</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Top">Top</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -71,8 +71,8 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 selectively commit files, view the diffs and other things.
 
 <div class="node">
-<a name="Status"></a>
 <p><hr>
+<a name="Status"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Untracked-files">Untracked files</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Introduction">Introduction</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -89,8 +89,8 @@ missing files, untracked files and changed files.
 files unmodified during the merge.
 
 <div class="node">
-<a name="Untracked-files"></a>
 <p><hr>
+<a name="Untracked-files"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Missing-Files">Missing Files</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Status">Status</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -103,8 +103,8 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 delete the file.
 
 <div class="node">
-<a name="Missing-Files"></a>
 <p><hr>
+<a name="Missing-Files"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Staging-and-Committing">Staging and Committing</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Untracked-files">Untracked files</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -117,8 +117,8 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 remove the file from the repo. To restore the file type <kbd>k</kbd>.
 
 <div class="node">
-<a name="Staging-and-Committing"></a>
 <p><hr>
+<a name="Staging-and-Committing"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Merged-Files">Merged Files</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Missing-Files">Missing Files</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -143,8 +143,8 @@ the staged files.
 any changes to your repo unless you commit.
 
 <div class="node">
-<a name="Merged-Files"></a>
 <p><hr>
+<a name="Merged-Files"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Pushing-and-Pulling">Pushing and Pulling</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Staging-and-Committing">Staging and Committing</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -161,8 +161,8 @@ merge will commit all the merged and unmodified files during the
 merge.
 
 <div class="node">
-<a name="Pushing-and-Pulling"></a>
 <p><hr>
+<a name="Pushing-and-Pulling"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Log">Log</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Merged-Files">Merged Files</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -177,8 +177,8 @@ specify the source/destination to the previous commands  with a prefix
 argument.
 
 <div class="node">
-<a name="Branch"></a>
 <p><hr>
+<a name="Branch"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Queue">Queue</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Log">Log</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -191,8 +191,8 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 branches. You can use <kbd>C</kbd> to checkout a branch.
 
 <div class="node">
-<a name="Queue"></a>
 <p><hr>
+<a name="Queue"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Using-Hg-Directly">Using Hg Directly</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Branch">Branch</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -222,15 +222,19 @@ Patches</em>, <em>UnApplied Patches</em> and the <em>Series</em>.
 </td><td valign="top" width="85%">remove the selected patch
 <br></td></tr><tr align="left"><td valign="top" width="15%">N
 </td><td valign="top" width="85%">create a new patch on top of current patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">C-u N
+</td><td valign="top" width="85%">same as N except this will also read the commit message for the patch
 <br></td></tr><tr align="left"><td valign="top" width="15%">f
 </td><td valign="top" width="85%">fold the selected patch into the current patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">F
+</td><td valign="top" width="85%">apply(qfinish) the selected patch into repo history
 <br></td></tr><tr align="left"><td valign="top" width="15%">G
 </td><td valign="top" width="85%">reset the guards of the selected patch with new guards
    <br></td></tr></table>
 
 <div class="node">
-<a name="Log"></a>
 <p><hr>
+<a name="Log"></a>
 Next:&nbsp;<a rel="next" accesskey="n" href="#Branch">Branch</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Pushing-and-Pulling">Pushing and Pulling</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
@@ -250,8 +254,8 @@ entries, and given a numeric prefix argument, <kbd>e</kbd> will add this
 number of entries.
 
 <div class="node">
-<a name="Using-Hg-Directly"></a>
 <p><hr>
+<a name="Using-Hg-Directly"></a>
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Queue">Queue</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
