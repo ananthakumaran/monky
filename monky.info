@@ -19,6 +19,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Menu:
 
 * Introduction::
+* Sections::
 * Status::
 * Untracked files::
 * Missing Files::
@@ -31,7 +32,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Using Hg Directly::
 
 
-File: monky.info,  Node: Introduction,  Next: Status,  Prev: Top,  Up: Top
+File: monky.info,  Node: Introduction,  Next: Sections,  Prev: Top,  Up: Top
 
 1 Introduction
 **************
@@ -40,14 +41,26 @@ Monky provides an interactive interface for Hg. Using Monky, your can
 selectively commit files, view the diffs and other things.
 
 
-File: monky.info,  Node: Status,  Next: Untracked files,  Prev: Introduction,  Up: Top
+File: monky.info,  Node: Sections,  Next: Status,  Prev: Introduction,  Up: Top
 
-2 Status
+2 Sections
+**********
+
+All items in the Monky buffers are nested 'sections'. The visibility of
+the current section can be toggled using `TAB' key. When a section is
+hidden, only its first line is shown and all its children are
+completely invisible.
+
+
+File: monky.info,  Node: Status,  Next: Untracked files,  Prev: Sections,  Up: Top
+
+3 Status
 ********
 
 Running `M-x monky-status' while visiting any file in a repo displays
 the status of the hg repo. The status buffer list down the missing
-files, untracked files and changed files.
+files, untracked files and changed files. By default the diff of the
+files are invisible. Use `TAB' key to toggle the visibility.
 
    During a merge the buffer will show the list of merged files, and
 files unmodified during the merge.
@@ -55,7 +68,7 @@ files unmodified during the merge.
 
 File: monky.info,  Node: Untracked files,  Next: Missing Files,  Prev: Status,  Up: Top
 
-3 Untracked files
+4 Untracked files
 *****************
 
 you can add a untracked file by typing key `s'. Type `k' to delete the
@@ -64,7 +77,7 @@ file.
 
 File: monky.info,  Node: Missing Files,  Next: Staging and Committing,  Prev: Untracked files,  Up: Top
 
-4 Missing Files
+5 Missing Files
 ***************
 
 This section list the files missing from the repo. Typing `s' will
@@ -73,7 +86,7 @@ remove the file from the repo. To restore the file type `k'.
 
 File: monky.info,  Node: Staging and Committing,  Next: Merged Files,  Prev: Missing Files,  Up: Top
 
-5 Staging and Committing
+6 Staging and Committing
 ************************
 
 _Changes_ section will list all the changes in the repo. Using monky
@@ -94,7 +107,7 @@ any changes to your repo unless you commit.
 
 File: monky.info,  Node: Merged Files,  Next: Pushing and Pulling,  Prev: Staging and Committing,  Up: Top
 
-6 Merged Files
+7 Merged Files
 **************
 
 After a merge, this section will list the files merged. Typing `m' will
@@ -106,7 +119,7 @@ commit all the merged and unmodified files during the merge.
 
 File: monky.info,  Node: Pushing and Pulling,  Next: Log,  Prev: Merged Files,  Up: Top
 
-7 Pushing and Pulling
+8 Pushing and Pulling
 *********************
 
 Type `P' to push the current branch, `f' to pull changes from remote
@@ -116,7 +129,7 @@ source/destination to the previous commands  with a prefix argument.
 
 File: monky.info,  Node: Branch,  Next: Queue,  Prev: Log,  Up: Top
 
-8 Branch
+9 Branch
 ********
 
 Typing `b' will bring up the branch buffer. This will list all the
@@ -125,8 +138,8 @@ branches. You can use `C' to checkout a branch.
 
 File: monky.info,  Node: Queue,  Next: Using Hg Directly,  Prev: Branch,  Up: Top
 
-9 Queue
-*******
+10 Queue
+********
 
 Use `M-x monky-queue' or `q' from the status buffer to view the queue
 buffer. The queue buffer will list the _Applied Patches_, _UnApplied
@@ -152,7 +165,7 @@ G           reset the guards of the selected patch with new guards
 
 File: monky.info,  Node: Log,  Next: Branch,  Prev: Pushing and Pulling,  Up: Top
 
-10 Log
+11 Log
 ******
 
 Typing `l' will bring up the log buffer. This will list the commit logs
@@ -167,7 +180,7 @@ given a numeric prefix argument, `e' will add this number of entries.
 
 File: monky.info,  Node: Using Hg Directly,  Prev: Queue,  Up: Top
 
-11 Using Hg Directly
+12 Using Hg Directly
 ********************
 
 To run a Hg command directly type `:' and enter the command in the
@@ -178,16 +191,17 @@ command.  The output of the command can be viewed by typing `$'.
 
 Tag Table:
 Node: Top421
-Node: Introduction789
-Node: Status1028
-Node: Untracked files1422
-Node: Missing Files1628
-Node: Staging and Committing1897
-Node: Merged Files2669
-Node: Pushing and Pulling3147
-Node: Branch3484
-Node: Queue3690
-Node: Log4785
-Node: Using Hg Directly5315
+Node: Introduction802
+Node: Sections1043
+Node: Status1376
+Node: Untracked files1854
+Node: Missing Files2060
+Node: Staging and Committing2329
+Node: Merged Files3101
+Node: Pushing and Pulling3579
+Node: Branch3916
+Node: Queue4122
+Node: Log5219
+Node: Using Hg Directly5749
 
 End Tag Table

@@ -23,6 +23,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 
 @menu
 * Introduction::
+* Sections::
 * Status::
 * Untracked files::
 * Missing Files::
@@ -41,12 +42,21 @@ Monky is an emacs extension, provides an interactive interface for Hg
 Monky provides an interactive interface for Hg. Using Monky, your can
 selectively commit files, view the diffs and other things.
 
+@node Sections
+@chapter Sections
+
+All items in the Monky buffers are nested 'sections'. The visibility
+of the current section can be toggled using @kbd{TAB} key. When a
+section is hidden, only its first line is shown and all its children
+are completely invisible.
+
 @node Status
 @chapter Status
 
 Running @kbd{M-x monky-status} while visiting any file in a repo
 displays the status of the hg repo. The status buffer list down the
-missing files, untracked files and changed files.
+missing files, untracked files and changed files. By default the diff
+of the files are invisible. Use @kbd{TAB} key to toggle the visibility.
 
 During a merge the buffer will show the list of merged files, and
 files unmodified during the merge.
