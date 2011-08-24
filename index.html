@@ -44,14 +44,15 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
 
 <ul class="menu">
 <li><a accesskey="1" href="#Introduction">Introduction</a>
-<li><a accesskey="2" href="#Status">Status</a>
-<li><a accesskey="3" href="#Untracked-files">Untracked files</a>
-<li><a accesskey="4" href="#Missing-Files">Missing Files</a>
-<li><a accesskey="5" href="#Staging-and-Committing">Staging and Committing</a>
-<li><a accesskey="6" href="#Merged-Files">Merged Files</a>
-<li><a accesskey="7" href="#Pushing-and-Pulling">Pushing and Pulling</a>
-<li><a accesskey="8" href="#Log">Log</a>
-<li><a accesskey="9" href="#Branch">Branch</a>
+<li><a accesskey="2" href="#Sections">Sections</a>
+<li><a accesskey="3" href="#Status">Status</a>
+<li><a accesskey="4" href="#Untracked-files">Untracked files</a>
+<li><a accesskey="5" href="#Missing-Files">Missing Files</a>
+<li><a accesskey="6" href="#Staging-and-Committing">Staging and Committing</a>
+<li><a accesskey="7" href="#Merged-Files">Merged Files</a>
+<li><a accesskey="8" href="#Pushing-and-Pulling">Pushing and Pulling</a>
+<li><a accesskey="9" href="#Log">Log</a>
+<li><a href="#Branch">Branch</a>
 <li><a href="#Queue">Queue</a>
 <li><a href="#Using-Hg-Directly">Using Hg Directly</a>
 </ul>
@@ -59,7 +60,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
 <div class="node">
 <p><hr>
 <a name="Introduction"></a>
-Next:&nbsp;<a rel="next" accesskey="n" href="#Status">Status</a>,
+Next:&nbsp;<a rel="next" accesskey="n" href="#Sections">Sections</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Top">Top</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
@@ -72,18 +73,35 @@ selectively commit files, view the diffs and other things.
 
 <div class="node">
 <p><hr>
-<a name="Status"></a>
-Next:&nbsp;<a rel="next" accesskey="n" href="#Untracked-files">Untracked files</a>,
+<a name="Sections"></a>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Status">Status</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Introduction">Introduction</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">2 Status</h2>
+<h2 class="chapter">2 Sections</h2>
+
+<p>All items in the Monky buffers are nested 'sections'. The visibility
+of the current section can be toggled using <kbd>TAB</kbd> key. When a
+section is hidden, only its first line is shown and all its children
+are completely invisible.
+
+<div class="node">
+<p><hr>
+<a name="Status"></a>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Untracked-files">Untracked files</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Sections">Sections</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">3 Status</h2>
 
 <p>Running <kbd>M-x monky-status</kbd> while visiting any file in a repo
 displays the status of the hg repo. The status buffer list down the
-missing files, untracked files and changed files.
+missing files, untracked files and changed files. By default the diff
+of the files are invisible. Use <kbd>TAB</kbd> key to toggle the visibility.
 
    <p>During a merge the buffer will show the list of merged files, and
 files unmodified during the merge.
@@ -97,7 +115,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">3 Untracked files</h2>
+<h2 class="chapter">4 Untracked files</h2>
 
 <p>you can add a untracked file by typing key <kbd>s</kbd>. Type <kbd>k</kbd> to
 delete the file.
@@ -111,7 +129,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">4 Missing Files</h2>
+<h2 class="chapter">5 Missing Files</h2>
 
 <p>This section list the files missing from the repo. Typing <kbd>s</kbd> will
 remove the file from the repo. To restore the file type <kbd>k</kbd>.
@@ -125,7 +143,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">5 Staging and Committing</h2>
+<h2 class="chapter">6 Staging and Committing</h2>
 
 <p><em>Changes</em> section will list all the changes in the repo. Using
 monky you can select a subset of your changes and commit it. Type
@@ -151,7 +169,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">6 Merged Files</h2>
+<h2 class="chapter">7 Merged Files</h2>
 
 <p>After a merge, this section will list the files merged. Typing <kbd>m</kbd>
 will mark the file as resolved and <kbd>x</kbd> will mark the file as
@@ -169,7 +187,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">7 Pushing and Pulling</h2>
+<h2 class="chapter">8 Pushing and Pulling</h2>
 
 <p>Type <kbd>P</kbd> to push the current branch, <kbd>f</kbd> to pull changes
 from remote and <kbd>F</kbd> to fetch changes from the remote. You can
@@ -185,7 +203,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">8 Branch</h2>
+<h2 class="chapter">9 Branch</h2>
 
 <p>Typing <kbd>b</kbd> will bring up the branch buffer. This will list all the
 branches. You can use <kbd>C</kbd> to checkout a branch.
@@ -199,7 +217,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">9 Queue</h2>
+<h2 class="chapter">10 Queue</h2>
 
 <p>Use <kbd>M-x monky-queue</kbd> or <kbd>q</kbd> from the status buffer to view
 the queue buffer. The queue buffer will list the <em>Applied
@@ -241,7 +259,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">10 Log</h2>
+<h2 class="chapter">11 Log</h2>
 
 <p>Typing <kbd>l</kbd> will bring up the log buffer. This will list the commit
 logs of the repo. You can use <kbd>n</kbd> and <kbd>p</kbd> to move to the
@@ -261,7 +279,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">11 Using Hg Directly</h2>
+<h2 class="chapter">12 Using Hg Directly</h2>
 
 <p>To run a Hg command directly type <kbd>:</kbd> and enter the command in the
 minibuffer. This will refresh the status buffer after the execution of
