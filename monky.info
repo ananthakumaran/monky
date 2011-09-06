@@ -101,6 +101,8 @@ previously staged files.
 buffer for the commit message. Typing `C-c C-c' will commit all the
 staged files.
 
+   You can reset the current working directory by typing `X'.
+
    Hg doesn't have any staging area. So staging and unstaging won't make
 any changes to your repo unless you commit.
 
@@ -197,11 +199,11 @@ Node: Status1376
 Node: Untracked files1854
 Node: Missing Files2060
 Node: Staging and Committing2329
-Node: Merged Files3101
-Node: Pushing and Pulling3579
-Node: Branch3916
-Node: Queue4122
-Node: Log5219
-Node: Using Hg Directly5749
+Node: Merged Files3164
+Node: Pushing and Pulling3642
+Node: Branch3979
+Node: Queue4185
+Node: Log5282
+Node: Using Hg Directly5812
 
 End Tag Table

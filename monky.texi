@@ -88,6 +88,8 @@ Once you staged all the necessary files type @kbd{c}. This will pop-up
 a buffer for the commit message. Typing @kbd{C-c C-c} will commit all
 the staged files.
 
+You can reset the current working directory by typing @kbd{X}.
+
 Hg doesn't have any staging area. So staging and unstaging won't make
 any changes to your repo unless you commit.
 

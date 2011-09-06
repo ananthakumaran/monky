@@ -331,6 +331,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "k") 'monky-discard-item)
     (define-key map (kbd "m") 'monky-resolve-item)
     (define-key map (kbd "x") 'monky-unresolve-item)
+    (define-key map (kbd "X") 'monky-reset-tip)
     map))
 
 (defvar monky-log-mode-map
@@ -1024,6 +1025,11 @@ With a prefix argument, visit in other window."
 (defun monky-checkout (node)
   (interactive (list (monky-read-revision "Update to : ")))
   (monky-run-hg "update" node))
+
+(defun monky-reset-tip ()
+  (interactive)
+  (when (yes-or-no-p "Discard all uncommitted changes? ")
+      (monky-run-hg "update" "--clean")))
 
 ;;; Merging
 
