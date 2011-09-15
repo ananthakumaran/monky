@@ -1438,7 +1438,7 @@ before the last command."
 
 (defun monky-insert-diff (file &optional status)
   (let ((p (point)))
-    (monky-hg-insert (list "diff" file))
+    (monky-hg-insert (list "diff" file "--config" "diff.git=Off"))
     (if (not (eq (char-before) ?\n))
 	(insert "\n"))
     (save-restriction
