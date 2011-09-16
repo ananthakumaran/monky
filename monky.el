@@ -34,7 +34,7 @@
   :group 'monky
   :type 'string)
 
-(defcustom monky-hg-standard-options '()
+(defcustom monky-hg-standard-options '("--config" "diff.git=Off")
   "Standard options when running Hg."
   :group 'monky
   :type '(repeat string))
@@ -1438,7 +1438,7 @@ before the last command."
 
 (defun monky-insert-diff (file &optional status)
   (let ((p (point)))
-    (monky-hg-insert (list "diff" file "--config" "diff.git=Off"))
+    (monky-hg-insert (list "diff" file))
     (if (not (eq (char-before) ?\n))
 	(insert "\n"))
     (save-restriction
