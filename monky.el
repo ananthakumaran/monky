@@ -1,8 +1,10 @@
-;;; monky.el -- control Hg from Emacs.
+;;; monky.el --- Control Hg from Emacs.
 
 ;; Copyright (C) 2011 Anantha Kumaran.
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
+;; URL: http://github.com/ananthakumaran/monky
+;; Version: 0.1
 ;; Keywords: tools
 
 ;; Monky is free software: you can redistribute it and/or modify it
@@ -1595,6 +1597,7 @@ before the last command."
   :lighter ()
   :keymap monky-status-mode-map)
 
+;;;###autoload
 (defun monky-status ()
   "Show the status of Hg repository."
   (interactive)
