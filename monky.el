@@ -1242,16 +1242,17 @@ before the last command."
   (insert (monky-hg-output args)))
 
 (defun monky-hg-output (args)
-  (with-output-to-string
-    (with-current-buffer standard-output
-      (monky-with-temp-file stderr
+  (monky-with-temp-file stderr
+    (save-current-buffer
+      (with-temp-buffer
 	(unless (eq 0 (apply #'monky-process-file
 			     monky-hg-executable
 			     nil (list t stderr) nil
 			     (append monky-hg-standard-options args)))
 	  (error (with-temp-buffer
 		   (insert-file-contents stderr)
-		   (buffer-string))))))))
+		   (buffer-string))))
+	(buffer-string)))))
 
 (defun monky-hg-string (&rest args)
   (monky-trim-line (monky-hg-output args)))
