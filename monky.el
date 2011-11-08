@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'bindat)
 
 (defgroup monky nil
   "Controlling Hg from Emacs."
@@ -99,6 +100,16 @@ Only considered when moving past the last entry with `monky-goto-next-section'."
   "The repository to which changes are pushed to by default."
   :group 'monky
   :type 'string)
+
+(defcustom monky-process-type nil
+  "How monky spawns Mercurial processes.
+Monky can either spawn a new Mercurial process for each request or
+use Mercurial's command server feature to run several commands in a
+single process instances. While the former is more robust, the latter
+is usually faster if Monky runs several commands."
+  :group 'monky
+  :type '(choice (const :tag "Single processes" :value nil)
+                 (const :tag "Use command server" :value cmdserver)))
 
 (defgroup monky-faces nil
   "Customize the appearance of Monky"
@@ -229,9 +240,175 @@ Many Monky faces inherit from this one by default."
                'start-file-process
              'start-process) args)))
 
-(defun monky-process-file (&rest args)
+(defun monky-process-file-single (&rest args)
   (monky-with-process-environment
     (apply 'process-file args)))
+
+
+;; Command server
+(defvar monky-process nil)
+(defvar monky-process-client-buffer nil)
+(defvar monky-process-input-buffer nil)
+(defvar monky-process-input-point nil)
+(defvar monky-process-buffer-name "*monky-process*")
+(monky-def-permanent-buffer-local monky-root-dir)
+
+(defun monky-cmdserver-sentinel (proc change)
+  (unless (memq (process-status proc) '(run stop))
+    (let ((buf (process-buffer proc)))
+      (delete-process proc)
+      ;(kill-buffer buf)
+      )))
+
+(defun monky-cmdserver-read-data (size)
+  (with-current-buffer (process-buffer monky-process)
+    (while (< (point-max) size)
+      (accept-process-output monky-process 0.1 nil t))
+    (let ((str (buffer-substring (point-min) (+ (point-min) size))))
+      (delete-region (point-min) (+ (point-min) size))
+      (goto-char (point-min))
+      (vconcat str))))
+
+(defun monky-cmdserver-read ()
+  (let* ((data (bindat-unpack '((channel byte) (len u32))
+                              (monky-cmdserver-read-data 5)))
+         (channel (bindat-get-field data 'channel))
+         (len (bindat-get-field data 'len)))
+    (cons channel (monky-cmdserver-read-data len))))
+
+(defun monky-cmdserver-write (data)
+  (process-send-string monky-process
+                       (concat (bindat-pack '((len u32))
+                                            `((len . ,(length data))))
+                               data)))
+
+(defun monky-cmdserver-start ()
+  (unless monky-root-dir
+    (setq monky-root-dir
+          (concat
+           (monky-trim-line
+            (monky-with-temp-file stderr
+              (save-current-buffer
+                (with-temp-buffer
+                  (unless (eq 0 (apply #'monky-process-file-single
+                                       monky-hg-executable
+                                       nil (list t stderr) nil
+                                       (append monky-hg-standard-options (list "root"))))
+                    (error (with-temp-buffer
+                             (insert-file-contents stderr)
+                             (buffer-string))))
+                  (buffer-string)))))
+           "/")))
+
+  (let ((dir monky-root-dir)
+        (buf (get-buffer-create monky-process-buffer-name))
+        (default-directory monky-root-dir)
+        (process-connection-type nil))
+    (with-current-buffer buf
+      (setq buffer-read-only nil)
+      (setq buffer-file-coding-system 'no-conversion)
+      (set-buffer-multibyte nil)
+      (erase-buffer)
+      (setq view-exit-action
+            #'(lambda (buffer)
+                (with-current-buffer buffer
+                  (bury-buffer))))
+      (setq default-directory dir)
+      (let ((monky-process (monky-start-process "monky-hg" buf "sh" "-c" "hg serve --cmdserver pipe 2> /dev/null")))
+        (set-process-coding-system monky-process 'no-conversion 'no-conversion)
+        (set-process-sentinel monky-process #'monky-cmdserver-sentinel)
+        (monky-cmdserver-read) ; read hello
+        monky-process))))
+
+(defun monky-cmdserver-stop (proc)
+  (delete-process proc))
+
+(defun monky-cmdserver-runcommand (&rest cmd-and-args)
+  (setq monky-error-message nil)
+  (with-current-buffer (process-buffer monky-process)
+    (setq buffer-read-only nil)
+    (erase-buffer))
+  (process-send-string monky-process "runcommand\n")
+  (monky-cmdserver-write (mapconcat #'identity cmd-and-args "\0"))
+  (let ((inhibit-read-only t))
+    (catch 'finished
+      (while t
+        (let* ((result (monky-cmdserver-read))
+               (channel (car result))
+               (text (cdr result)))
+          (cond
+           ((eq channel ?o)
+            (insert (concat text)))
+           ((eq channel ?r)
+            (throw 'finished
+                   (bindat-get-field (bindat-unpack '((code u32)) text) 'code)))
+           ((eq channel ?e)
+            (setq monky-error-message (concat monky-error-message text)))
+           ((memq channel '(?I ?L))
+            (with-current-buffer monky-process-input-buffer
+              (let* ((max (if (eq channel ?I)
+                              (point-max)
+                            (save-excursion
+                              (goto-point monky-process-input-point)
+                              (line-beginning-position 2))))
+                     (maxreq (bindat-get-field (bindat-unpack '((len u32)) text) 'len))
+                     (len (min (- max monky-process-input-point) maxreq))
+                     (end (+ monky-process-input-point len)))
+
+                (monky-cmdserver-write
+                 (buffer-substring monky-process-input-point end))
+                (setq monky-process-input-point end))))
+           (t
+            (setq monky-error-message (format "Unsupported channel: %c" channel)))))))))
+
+(defun monky-cmdserver-process-file (program infile buffer display &rest args)
+  "Same as `process-file` but uses the currently active hg command-server."
+  (if (or infile display)
+      (apply #'monky-process-file-single program infile buffer display args)
+    (let ((stdout (if (consp buffer) (car buffer) buffer))
+          (stderr (and (consp buffer) (cadr buffer))))
+      (if (eq stdout t) (setq stdout (current-buffer)))
+      (if (eq stderr t) (setq stderr stdout))
+      (let ((result
+             (if stdout
+                 (with-current-buffer stdout
+                   (apply #'monky-cmdserver-runcommand args))
+               (with-temp-buffer
+                 (apply #'monky-cmdserver-runcommand args)))))
+        (cond
+         ((bufferp stderr)
+          (when monky-error-message
+            (with-current-buffer stderr
+              (insert monky-error-message))))
+         ((stringp stderr)
+          (with-temp-file stderr
+            (when monky-error-message
+              (insert monky-error-message)))))
+        result))))
+
+(defun monky-process-file (&rest args)
+  "Same as `process-file` in the current hg environment.
+This function either call `monky-process-file-cmdserver` or
+`monky-process-file-single` depending on whether the hg
+command-server should be used."
+  (apply (cond
+          (monky-process #'monky-cmdserver-process-file)
+          ((eq monky-process-type 'cmdserver)
+           (error "No process started (forget `monky-with-process`?)"))
+          (t #'monky-process-file-single))
+         args))
+
+(defmacro monky-with-process (&rest body)
+  (declare (indent 0)
+           (debug (body)))
+  `(let ((proc monky-process))
+     (let ((monky-process monky-process))
+       (when (and (not proc) (eq monky-process-type 'cmdserver))
+         (setq monky-process (monky-cmdserver-start)))
+       ,@body
+       (when (and monky-process (not proc) (eq monky-process-type 'cmdserver))
+         (monky-cmdserver-stop monky-process)))))
+
 
 (defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
 (defun monky-bug-report (str)
@@ -500,30 +677,31 @@ The buffer will be narrowed to the inserted text.
 It should add sectioning as needed for monky interaction
 
 CMD is an external command that will be run with ARGS as arguments"
-  (let* ((body-beg nil)
-         (section-title (if (consp section-title-and-type)
-                            (car section-title-and-type)
-                          section-title-and-type))
-         (section-type (if (consp section-title-and-type)
-                           (cdr section-title-and-type)
-                         nil))
-         (section (monky-with-section section-title section-type
-                    (if buffer-title
-                        (insert (propertize buffer-title 'face 'monky-section-title) "\n"))
-                    (setq body-beg (point))
-                    (apply 'monky-process-file cmd nil t nil args)
-                    (if (not (eq (char-before) ?\n))
-                        (insert "\n"))
-                    (if washer
-                        (save-restriction
-                          (narrow-to-region body-beg (point))
-                          (goto-char (point-min))
-                          (funcall washer)
-                          (goto-char (point-max)))))))
-    (if (= body-beg (point))
-        (monky-cancel-section section)
-      (insert "\n"))
-    section))
+  (monky-with-process
+    (let* ((body-beg nil)
+           (section-title (if (consp section-title-and-type)
+                              (car section-title-and-type)
+                            section-title-and-type))
+           (section-type (if (consp section-title-and-type)
+                             (cdr section-title-and-type)
+                           nil))
+           (section (monky-with-section section-title section-type
+                      (if buffer-title
+                          (insert (propertize buffer-title 'face 'monky-section-title) "\n"))
+                      (setq body-beg (point))
+                      (apply 'monky-process-file cmd nil t nil args)
+                      (if (not (eq (char-before) ?\n))
+                          (insert "\n"))
+                      (if washer
+                          (save-restriction
+                            (narrow-to-region body-beg (point))
+                            (goto-char (point-min))
+                            (funcall washer)
+                            (goto-char (point-max)))))))
+      (if (= body-beg (point))
+          (monky-cancel-section section)
+        (insert "\n"))
+      section)))
 
 (defun monky-cancel-section (section)
   (delete-region (monky-section-beginning section)
@@ -703,12 +881,37 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (setq comps (nthcdr (+ (length monky-hg-standard-options) 1) comps)))
   (car comps))
 
-(defvar monky-process nil)
-(defvar monky-process-client-buffer nil)
-(defvar monky-process-buffer-name "*monky-process*")
-
-(defun monky-run* (cmd-and-args
+(defun monky-cmdserver-run* (cmd-and-args
                    &optional logline noerase noerror nowait input)
+  (if nowait
+      (monky-run-single* cmd-and-args logline noerase noerror nowait input)
+    (let ((dir default-directory)
+          (successp nil))
+      (monky-set-mode-line-process
+       (monky-process-indicator-from-command cmd-and-args))
+      (setq monky-process-client-buffer (current-buffer))
+      (let ((inhibit-read-only t)
+            (monky-process-input-buffer input)
+            (monky-process-input-point (and input
+                                            (with-current-buffer input
+                                              (point-min)))))
+        (with-current-buffer monky-process-client-buffer
+          (insert "$ " (or logline
+                           (mapconcat #'identity cmd-and-args " "))
+                  "\n"))
+        (setq successp
+              (equal (apply #'monky-cmdserver-runcommand (cdr cmd-and-args)) 0))
+        (monky-set-mode-line-process nil)
+        (monky-need-refresh monky-process-client-buffer)
+        (or successp
+            noerror
+            (error
+             (or (monky-abort-message monky-error-message)
+                 "Hg failed")))
+        successp))))
+
+(defun monky-run-single* (cmd-and-args
+                          &optional logline noerase noerror nowait input)
   (if (and monky-process
            (get-buffer monky-process-buffer-name))
       (error "Hg is already running"))
@@ -782,7 +985,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
                (monky-need-refresh monky-process-client-buffer))
               (t
                (setq successp
-                     (equal (apply 'monky-process-file cmd nil buf nil args) 0))
+                     (equal (apply 'monky-process-file-single cmd nil buf nil args) 0))
                (monky-set-mode-line-process nil)
                (monky-need-refresh monky-process-client-buffer))))
       (or successp
@@ -791,6 +994,14 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
            (or (monky-abort-message (get-buffer monky-process-buffer-name))
                "Hg failed")))
       successp)))
+
+(defun monky-run* (&rest args)
+  (apply (cond
+          (monky-process #'monky-cmdserver-run*)
+          ((eq monky-process-type 'cmdserver)
+           (error "No process started (forget `monky-with-process`?)"))
+          (t #'monky-run-single*))
+         args))
 
 (defun monky-process-sentinel (process event)
   (let ((msg (format "Hg %s." (substring event 0 -1)))
@@ -979,14 +1190,15 @@ With a prefix argument, visit in other window."
 (defun monky-unstage-item ()
   "Remove the item at point from the staging area."
   (interactive)
-  (monky-section-action (item info "unstage")
-    ((staged diff)
-     (monky-unstage-file (monky-section-title item))
-     (monky-refresh-buffer))
-    ((staged)
-     (monky-unstage-all))
-    ((changes diff)
-     (error "Already unstaged"))))
+  (monky-with-process
+    (monky-section-action (item info "unstage")
+      ((staged diff)
+       (monky-unstage-file (monky-section-title item))
+       (monky-refresh-buffer))
+      ((staged)
+       (monky-unstage-all))
+      ((changes diff)
+       (error "Already unstaged")))))
 
 ;;; Updating
 
@@ -1114,19 +1326,20 @@ With a prefix argument, visit in other window."
 (defvar monky-refresh-pending nil)
 
 (defun monky-refresh-wrapper (func)
-  (if monky-refresh-pending
-      (funcall func)
-    (let* ((dir default-directory)
-           (status-buffer (monky-find-status-buffer dir))
-           (monky-refresh-needing-buffers nil)
-           (monky-refresh-pending t))
-      (unwind-protect
-          (funcall func)
-        (when monky-refresh-needing-buffers
-          (monky-revert-buffers dir)
-          (dolist (b (adjoin status-buffer
-                             monky-refresh-needing-buffers))
-            (monky-refresh-buffer b)))))))
+  (monky-with-process
+    (if monky-refresh-pending
+        (funcall func)
+      (let* ((dir default-directory)
+             (status-buffer (monky-find-status-buffer dir))
+             (monky-refresh-needing-buffers nil)
+             (monky-refresh-pending t))
+        (unwind-protect
+            (funcall func)
+          (when monky-refresh-needing-buffers
+            (monky-revert-buffers dir)
+            (dolist (b (adjoin status-buffer
+                               monky-refresh-needing-buffers))
+              (monky-refresh-buffer b))))))))
 
 (defun monky-need-refresh (&optional buffer)
   (let ((buffer (or buffer (current-buffer))))
@@ -1610,15 +1823,16 @@ before the last command."
 (defun monky-status ()
   "Show the status of Hg repository."
   (interactive)
-  (let* ((rootdir (monky-get-root-dir))
-         (buf (or (monky-find-status-buffer rootdir)
-                  (generate-new-buffer
-                   (concat "*monky: "
-                           (file-name-nondirectory
-                            (directory-file-name rootdir)) "*")))))
-    (pop-to-buffer buf)
-    (monky-mode-init rootdir 'status #'monkey-refresh-status)
-    (monky-status-mode t)))
+  (monky-with-process
+    (let* ((rootdir (monky-get-root-dir))
+           (buf (or (monky-find-status-buffer rootdir)
+                    (generate-new-buffer
+                     (concat "*monky: "
+                             (file-name-nondirectory
+                              (directory-file-name rootdir)) "*")))))
+      (pop-to-buffer buf)
+      (monky-mode-init rootdir 'status #'monkey-refresh-status)
+      (monky-status-mode t))))
 
 ;;; Log mode
 
@@ -1641,10 +1855,11 @@ before the last command."
 
 (defun monky-log ()
   (interactive)
-  (let ((topdir (monky-get-root-dir)))
-    (pop-to-buffer monky-log-buffer-name)
-    (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
-    (monky-log-mode t)))
+  (monky-with-process
+    (let ((topdir (monky-get-root-dir)))
+      (pop-to-buffer monky-log-buffer-name)
+      (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
+      (monky-log-mode t))))
 
 (defvar monky-log-graph-re "^\\([-\\/@o+|\s]+\s*\\) \\([a-z0-9]\\{40\\}\\)\\(.*\\)$")
 
@@ -1730,20 +1945,21 @@ With a non numeric prefix ARG, show all entries"
 (defvar monky-commit-buffer-name "*monky-commit*")
 
 (defun monky-show-commit (commit &optional select)
-  (when (monky-section-p commit)
-    (setq commit (monky-section-info commit)))
-  (unless (and commit
-               (monky-hg-revision-p commit))
-    (error "%s is not a commit" commit))
-  (let ((topdir (monky-get-root-dir))
-        (buffer (get-buffer-create monky-commit-buffer-name)))
-    (display-buffer buffer)
-    (with-current-buffer buffer
-      (monky-mode-init topdir 'commit
-                       #'monky-refresh-commit-buffer commit)
-      (monky-commit-mode t))
-    (if select
-        (pop-to-buffer buffer))))
+  (monky-with-process
+    (when (monky-section-p commit)
+      (setq commit (monky-section-info commit)))
+    (unless (and commit
+                 (monky-hg-revision-p commit))
+      (error "%s is not a commit" commit))
+    (let ((topdir (monky-get-root-dir))
+          (buffer (get-buffer-create monky-commit-buffer-name)))
+      (display-buffer buffer)
+      (with-current-buffer buffer
+        (monky-mode-init topdir 'commit
+                         #'monky-refresh-commit-buffer commit)
+        (monky-commit-mode t))
+      (if select
+          (pop-to-buffer buffer)))))
 
 (defun monky-refresh-commit-buffer (commit)
   (monky-create-buffer-sections
@@ -1933,10 +2149,11 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-queue ()
   (interactive)
-  (let ((topdir (monky-get-root-dir)))
-    (pop-to-buffer monky-queue-buffer-name)
-    (monky-mode-init topdir 'queue #'monky-refresh-queue-buffer)
-    (monky-queue-mode t)))
+  (monky-with-process
+    (let ((topdir (monky-get-root-dir)))
+      (pop-to-buffer monky-queue-buffer-name)
+      (monky-mode-init topdir 'queue #'monky-refresh-queue-buffer)
+      (monky-queue-mode t))))
 
 (defun monky-qpop (&optional patch)
   (interactive)
