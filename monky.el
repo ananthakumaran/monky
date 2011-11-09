@@ -288,21 +288,8 @@ Many Monky faces inherit from this one by default."
 
 (defun monky-cmdserver-start ()
   (unless monky-root-dir
-    (setq monky-root-dir
-          (concat
-           (monky-trim-line
-            (monky-with-temp-file stderr
-              (save-current-buffer
-                (with-temp-buffer
-                  (unless (eq 0 (apply #'monky-process-file-single
-                                       monky-hg-executable
-                                       nil (list t stderr) nil
-                                       (append monky-hg-standard-options (list "root"))))
-                    (error (with-temp-buffer
-                             (insert-file-contents stderr)
-                             (buffer-string))))
-                  (buffer-string)))))
-           "/")))
+    (let (monky-process monky-process-type)
+      (setq monky-root-dir (monky-get-root-dir))))
 
   (let ((dir monky-root-dir)
         (buf (get-buffer-create monky-cmd-process-buffer-name))
@@ -885,6 +872,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (setq comps (nthcdr (+ (length monky-hg-standard-options) 1) comps)))
   (car comps))
 
+
 ;; (defun monky-cmdserver-run* (cmd-and-args
 ;;                    &optional logline noerase noerror nowait input)
 ;;   (if nowait
@@ -915,7 +903,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
 ;;         successp))))
 
 (defun monky-run* (cmd-and-args
-                          &optional logline noerase noerror nowait input)
+		   &optional logline noerase noerror nowait input)
   (if (and monky-process
            (get-buffer monky-process-buffer-name))
       (error "Hg is already running"))
@@ -1008,13 +996,16 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
                "Hg failed")))
       successp)))
 
-;; (defun monky-run* (&rest args)
-;;   (apply (cond
-;;           (monky-process #'monky-cmdserver-run*)
-;;           ((eq monky-process-type 'cmdserver)
-;;            (error "No process started (forget `monky-with-process`?)"))
-;;           (t #'monky-run-single*))
-;;          args))
+;; (defun monky-run* (cmd-and-args
+;;                    &optional logline noerase noerror nowait input)
+;;   (funcall (cond
+;;             (monky-process #'monky-cmdserver-run*)
+;;             (nowait #'monky-run-single*) ; no cmdserver in this case
+;;             ((eq monky-process-type 'cmdserver)
+;;              (error "No process started (forget `monky-with-process`?)"))
+;;             (t #'monky-run-single*))
+;;            cmd-and-args logline noerase noerror nowait input))
+
 
 (defun monky-process-sentinel (process event)
   (let ((msg (format "Hg %s." (substring event 0 -1)))
