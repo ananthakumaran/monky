@@ -882,7 +882,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
   (car comps))
 
 (defun monky-cmdserver-run* (cmd-and-args
-                   &optional logline noerase noerror nowait input)
+                             &optional logline noerase noerror nowait input)
   (if nowait
       (monky-run-single* cmd-and-args logline noerase noerror nowait input)
     (let ((dir default-directory)
@@ -995,13 +995,15 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
                "Hg failed")))
       successp)))
 
-(defun monky-run* (&rest args)
-  (apply (cond
-          (monky-process #'monky-cmdserver-run*)
-          ((eq monky-process-type 'cmdserver)
-           (error "No process started (forget `monky-with-process`?)"))
-          (t #'monky-run-single*))
-         args))
+(defun monky-run* (cmd-and-args
+                   &optional logline noerase noerror nowait input)
+  (funcall (cond
+            (monky-process #'monky-cmdserver-run*)
+            (nowait #'monky-run-single*) ; no cmdserver in this case
+            ((eq monky-process-type 'cmdserver)
+             (error "No process started (forget `monky-with-process`?)"))
+            (t #'monky-run-single*))
+           cmd-and-args logline noerase noerror nowait input))
 
 (defun monky-process-sentinel (process event)
   (let ((msg (format "Hg %s." (substring event 0 -1)))
