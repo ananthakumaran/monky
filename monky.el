@@ -284,21 +284,8 @@ Many Monky faces inherit from this one by default."
 
 (defun monky-cmdserver-start ()
   (unless monky-root-dir
-    (setq monky-root-dir
-          (concat
-           (monky-trim-line
-            (monky-with-temp-file stderr
-              (save-current-buffer
-                (with-temp-buffer
-                  (unless (eq 0 (apply #'monky-process-file-single
-                                       monky-hg-executable
-                                       nil (list t stderr) nil
-                                       (append monky-hg-standard-options (list "root"))))
-                    (error (with-temp-buffer
-                             (insert-file-contents stderr)
-                             (buffer-string))))
-                  (buffer-string)))))
-           "/")))
+    (let (monky-process monky-process-type)
+      (setq monky-root-dir (monky-get-root-dir))))
 
   (let ((dir monky-root-dir)
         (buf (get-buffer-create monky-process-buffer-name))
