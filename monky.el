@@ -162,6 +162,18 @@ Many Monky faces inherit from this one by default."
   "Face for the message element of the log output."
   :group 'monky-faces)
 
+(defface monky-queue-active
+  '((((class color) (background light))
+     :box t
+     :background "light green"
+     :foreground "dark olive green")
+    (((class color) (background dark))
+     :box t
+     :background "light green"
+     :foreground "dark olive green"))
+  "Face for active patch queue"
+  :group 'monky)
+
 (defface monky-queue-positive-guard
   '((((class color) (background light))
      :box t
@@ -932,7 +944,9 @@ With a prefix argument, visit in other window."
     ((commit)
      (message (monky-show-commit info)))
     ((longer)
-     (monky-log-show-more-entries))))
+     (monky-log-show-more-entries))
+    ((queue)
+     (monky-qqueue info))))
 
 (defun monky-stage-all ()
   "Add all items in Changes to the staging area."
@@ -1880,8 +1894,38 @@ With a non numeric prefix ARG, show all entries"
 	t)
     nil))
 
+(defun monky-wash-queue-queue ()
+  (if (looking-at "^\\([^()\n]+\\)\\(\\s-+([^)]*)\\)?$")
+      (let ((queue (match-string 1)))
+        (monky-delete-line)
+        (when (match-beginning 2)
+          (setq monky-patches-dir
+                (if (string= queue "patches")
+                    ".hg/patches/"
+                  (concat ".hg/patches-" queue "/")))
+          (put-text-property 0 (length queue) 'face 'monky-queue-active queue))
+        (monky-with-section queue 'queue
+          (monky-set-section-info queue)
+          (insert "\t" queue)
+          (forward-line))
+        t)
+    nil))
+
+(defun monky-wash-queue-queues ()
+    (if (looking-at "^patches (.*)\n?\\'")
+        (progn
+          (monky-delete-line t)
+          nil)
+      (monky-wash-sequence #'monky-wash-queue-queue)))
+
 (defun monky-wash-queue-patches ()
   (monky-wash-sequence #'monky-wash-queue-patch))
+
+;;; Queues
+(defun monky-insert-queue-queues ()
+  (monky-hg-section 'queues "Patch Queues:"
+                    #'monky-wash-queue-queues
+                    "qqueue" "--list" "extensions.mq="))
 
 ;;; Applied Patches
 (defun monky-insert-queue-applied ()
@@ -1915,12 +1959,14 @@ With a non numeric prefix ARG, show all entries"
 		    "qselect" "--config" "extensions.mq="))
 
 (defun monky-refresh-queue-buffer ()
-  (monky-create-buffer-sections
-    (monky-with-section 'queue nil
-      (monky-insert-active-guards)
-      (monky-insert-queue-applied)
-      (monky-insert-queue-unapplied)
-      (monky-insert-queue-series))))
+  (let ((monky-patches-dir monky-patches-dir))
+    (monky-create-buffer-sections
+      (monky-with-section 'queue nil
+        (monky-insert-queue-queues)
+        (monky-insert-active-guards)
+        (monky-insert-queue-applied)
+        (monky-insert-queue-unapplied)
+        (monky-insert-queue-series)))))
 
 (defun monky-queue ()
   (interactive)
@@ -1928,6 +1974,11 @@ With a non numeric prefix ARG, show all entries"
     (pop-to-buffer monky-queue-buffer-name)
     (monky-mode-init topdir 'queue #'monky-refresh-queue-buffer)
     (monky-queue-mode t)))
+
+(defun monky-qqueue (queue)
+  (monky-run-hg "qqueue"
+                "--config" "extensions.mq="
+                queue))
 
 (defun monky-qpop (&optional patch)
   (interactive)
