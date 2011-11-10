@@ -1959,13 +1959,14 @@ With a non numeric prefix ARG, show all entries"
 		    "qselect" "--config" "extensions.mq="))
 
 (defun monky-refresh-queue-buffer ()
-  (monky-create-buffer-sections
-    (monky-with-section 'queue nil
-      (monky-insert-queue-queues)
-      (monky-insert-active-guards)
-      (monky-insert-queue-applied)
-      (monky-insert-queue-unapplied)
-      (monky-insert-queue-series))))
+  (let ((monky-patches-dir monky-patches-dir))
+    (monky-create-buffer-sections
+      (monky-with-section 'queue nil
+        (monky-insert-queue-queues)
+        (monky-insert-active-guards)
+        (monky-insert-queue-applied)
+        (monky-insert-queue-unapplied)
+        (monky-insert-queue-series)))))
 
 (defun monky-queue ()
   (interactive)
