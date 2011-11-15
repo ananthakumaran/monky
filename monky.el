@@ -254,6 +254,7 @@ Many Monky faces inherit from this one by default."
 (defvar monky-cmd-process-buffer-name "*monky-cmd-process*")
 (defvar monky-cmd-process-input-buffer nil)
 (defvar monky-cmd-process-input-point nil)
+(defvar monky-cmd-error-message nil)
 
 (monky-def-permanent-buffer-local monky-root-dir)
 
@@ -334,7 +335,7 @@ Many Monky faces inherit from this one by default."
             (throw 'finished
                    (bindat-get-field (bindat-unpack '((code u32)) text) 'code)))
            ((eq channel ?e)
-            (setq monky-error-message (concat monky-error-message text)))
+            (setq monky-cmd-error-message (concat monky-cmd-error-message text)))
            ((memq channel '(?I ?L))
             (with-current-buffer monky-cmd-process-input-buffer
               (let* ((max (if (eq channel ?I)
@@ -350,7 +351,7 @@ Many Monky faces inherit from this one by default."
                  (buffer-substring monky-cmd-process-input-point end))
                 (setq monky-cmd-process-input-point end))))
            (t
-            (setq monky-error-message (format "Unsupported channel: %c" channel)))))))))
+            (setq monky-cmd-error-message (format "Unsupported channel: %c" channel)))))))))
 
 (defun monky-cmdserver-process-file (program infile buffer display &rest args)
   "Same as `process-file' but uses the currently active hg command-server."
@@ -368,13 +369,13 @@ Many Monky faces inherit from this one by default."
                  (apply #'monky-cmdserver-runcommand args)))))
         (cond
          ((bufferp stderr)
-          (when monky-error-message
+          (when monky-cmd-error-message
             (with-current-buffer stderr
-              (insert monky-error-message))))
+              (insert monky-cmd-error-message))))
          ((stringp stderr)
           (with-temp-file stderr
-            (when monky-error-message
-              (insert monky-error-message)))))
+            (when monky-cmd-error-message
+              (insert monky-cmd-error-message)))))
         result))))
 
 (defun monky-process-file (&rest args)
@@ -392,13 +393,14 @@ command-server should be used."
 (defmacro monky-with-process (&rest body)
   (declare (indent 0)
 	   (debug (body)))
-  `(let ((proc monky-cmd-process))
-     (let ((monky-cmd-process monky-cmd-process))
-       (when (and (not proc) (eq monky-process-type 'cmdserver))
-	 (setq monky-cmd-process (monky-cmdserver-start)))
-       ,@body
-       (when (and monky-cmd-process (not proc) (eq monky-process-type 'cmdserver))
-	 (monky-cmdserver-stop monky-cmd-process)))))
+  `(let ((outer (not monky-cmd-process)))
+     (when (and outer (eq monky-process-type 'cmdserver))
+       (setq monky-cmd-process (monky-cmdserver-start)))
+     ,@body
+     (when (and monky-cmd-process outer (eq monky-process-type 'cmdserver))
+       (delete-process monky-cmd-process)
+       (setq monky-cmd-process nil))))
+
 
 
 (defvar monky-bug-report-url "http://github.com/ananthakumaran/monky/issues")
@@ -872,36 +874,6 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (setq comps (nthcdr (+ (length monky-hg-standard-options) 1) comps)))
   (car comps))
 
-
-;; (defun monky-cmdserver-run* (cmd-and-args
-;;                    &optional logline noerase noerror nowait input)
-;;   (if nowait
-;;       (monky-run-single* cmd-and-args logline noerase noerror nowait input)
-;;     (let ((dir default-directory)
-;;           (successp nil))
-;;       (monky-set-mode-line-process
-;;        (monky-process-indicator-from-command cmd-and-args))
-;;       (setq monky-process-client-buffer (current-buffer))
-;;       (let ((inhibit-read-only t)
-;;             (monky-process-input-buffer input)
-;;             (monky-process-input-point (and input
-;;                                             (with-current-buffer input
-;;                                               (point-min)))))
-;;         (with-current-buffer monky-process-client-buffer
-;;           (insert "$ " (or logline
-;;                            (mapconcat #'identity cmd-and-args " "))
-;;                   "\n"))
-;;         (setq successp
-;;               (equal (apply #'monky-cmdserver-runcommand (cdr cmd-and-args)) 0))
-;;         (monky-set-mode-line-process nil)
-;;         (monky-need-refresh monky-process-client-buffer)
-;;         (or successp
-;;             noerror
-;;             (error
-;;              (or (monky-abort-message monky-error-message)
-;;                  "Hg failed")))
-;;         successp))))
-
 (defun monky-run* (cmd-and-args
 		   &optional logline noerase noerror nowait input)
   (if (and monky-process
@@ -992,19 +964,10 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
       (or successp
           noerror
           (error
-           (or (monky-abort-message (get-buffer monky-process-buffer-name))
+           (or monky-cmd-error-message
+	       (monky-abort-message (get-buffer monky-process-buffer-name))
                "Hg failed")))
       successp)))
-
-;; (defun monky-run* (cmd-and-args
-;;                    &optional logline noerase noerror nowait input)
-;;   (funcall (cond
-;;             (monky-process #'monky-cmdserver-run*)
-;;             (nowait #'monky-run-single*) ; no cmdserver in this case
-;;             ((eq monky-process-type 'cmdserver)
-;;              (error "No process started (forget `monky-with-process`?)"))
-;;             (t #'monky-run-single*))
-;;            cmd-and-args logline noerase noerror nowait input))
 
 
 (defun monky-process-sentinel (process event)
