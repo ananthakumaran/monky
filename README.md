@@ -29,3 +29,7 @@ Heavily borrowed from [Magit][magit]. Thanks to Marius Vollmer.
 
 [magit]: http://github.com/magit/magit
 [monky-documentation]: http://ananthakumaran.github.com/monky/index.html
+
+## Contributors
+[ananthakumaran](https://github.com/ananthakumaran) (Anantha Kumaran)
+[lyro](https://github.com/lyro) (Frank Fischer)
