@@ -396,10 +396,11 @@ command-server should be used."
   `(let ((outer (not monky-cmd-process)))
      (when (and outer (eq monky-process-type 'cmdserver))
        (setq monky-cmd-process (monky-cmdserver-start)))
-     ,@body
-     (when (and monky-cmd-process outer (eq monky-process-type 'cmdserver))
-       (delete-process monky-cmd-process)
-       (setq monky-cmd-process nil))))
+     (unwind-protect
+	 (progn ,@body)
+       (when (and monky-cmd-process outer (eq monky-process-type 'cmdserver))
+	 (delete-process monky-cmd-process)
+	 (setq monky-cmd-process nil)))))
 
 
 
