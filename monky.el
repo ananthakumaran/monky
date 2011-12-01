@@ -1288,6 +1288,12 @@ With a prefix argument, visit in other window."
     ((missing file)
      (monky-revert-file info))))
 
+(defun monky-quit-window (&optional kill-buffer)
+  "Bury the buffer and delete its window.  With a prefix argument, kill the
+buffer instead."
+  (interactive "P")
+  (quit-window kill-buffer (selected-window)))
+
 ;;; Refresh
 
 (defun monky-revert-buffers (dir &optional ignore-modtime)
