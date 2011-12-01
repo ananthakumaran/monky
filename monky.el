@@ -500,7 +500,8 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd ":") 'monky-hg-command)
     (define-key map (kbd "l") 'monky-log)
     (define-key map (kbd "b") 'monky-branches)
-    (define-key map (kbd "q") 'monky-queue)
+    (define-key map (kbd "Q") 'monky-queue)
+    (define-key map (kbd "q") 'monky-quit-window)
     map))
 
 (defvar monky-status-mode-map
