@@ -34,3 +34,6 @@ Heavily borrowed from [Magit][magit]. Thanks to Marius Vollmer.
 [ananthakumaran](https://github.com/ananthakumaran) (Anantha Kumaran)
 
 [lyro](https://github.com/lyro) (Frank Fischer)
+
+[tkf](https://github.com/tkf) (Takafumi Arakaki)
+

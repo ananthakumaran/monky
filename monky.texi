@@ -120,7 +120,7 @@ branches. You can use @kbd{C} to checkout a branch.
 @node Queue
 @chapter Queue
 
-Use @kbd{M-x monky-queue} or @kbd{q} from the status buffer to view
+Use @kbd{M-x monky-queue} or @kbd{Q} from the status buffer to view
 the queue buffer. The queue buffer will list the @emph{Applied
 Patches}, @emph{UnApplied Patches} and the @emph{Series}.
 
