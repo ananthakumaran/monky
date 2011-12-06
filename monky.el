@@ -495,6 +495,8 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "p") 'monky-goto-previous-section)
     (define-key map (kbd "RET") 'monky-visit-item)
     (define-key map (kbd "TAB") 'monky-toggle-section)
+    (define-key map (kbd "SPC") 'monky-show-item-or-scroll-up)
+    (define-key map (kbd "DEL") 'monky-show-item-or-scroll-down)
     (define-key map (kbd "g") 'monky-refresh)
     (define-key map (kbd "$") 'monky-display-process)
     (define-key map (kbd ":") 'monky-hg-command)
@@ -1268,6 +1270,22 @@ With a prefix argument, visit in other window."
     ((log commits commit)
      (monky-backout info))))
 
+(defun monky-show-item-or-scroll-up ()
+  (interactive)
+  (monky-section-action (item info)
+    ((commit)
+     (monky-show-commit info nil #'scroll-up))
+    (t
+     (scroll-up))))
+
+(defun monky-show-item-or-scroll-down ()
+  (interactive)
+  (monky-section-action (item info)
+    ((commit)
+     (monky-show-commit info nil #'scroll-down))
+    (t
+     (scroll-down))))
+
 ;;; Miscellaneous
 
 (defun monky-revert-file (file)
@@ -1933,7 +1951,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defvar monky-commit-buffer-name "*monky-commit*")
 
-(defun monky-show-commit (commit &optional select)
+(defun monky-show-commit (commit &optional select scroll)
   (monky-with-process
     (when (monky-section-p commit)
       (setq commit (monky-section-info commit)))
@@ -1942,11 +1960,20 @@ With a non numeric prefix ARG, show all entries"
       (error "%s is not a commit" commit))
     (let ((topdir (monky-get-root-dir))
           (buffer (get-buffer-create monky-commit-buffer-name)))
-      (display-buffer buffer)
-      (with-current-buffer buffer
-        (monky-mode-init topdir 'commit
-                         #'monky-refresh-commit-buffer commit)
-        (monky-commit-mode t))
+      (cond
+       (scroll
+        (let ((win (get-buffer-window buffer)))
+          (cond ((not win)
+                 (display-buffer buffer))
+                (scroll
+                 (with-selected-window win
+                   (funcall scroll))))))
+       (t
+        (display-buffer buffer)
+        (with-current-buffer buffer
+          (monky-mode-init topdir 'commit
+                           #'monky-refresh-commit-buffer commit)
+          (monky-commit-mode t))))
       (if select
           (pop-to-buffer buffer)))))
 
