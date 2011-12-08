@@ -2239,8 +2239,15 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-qrefresh ()
   (interactive)
-  (monky-run-hg "qrefresh"
-                "--config" "extensions.mq="))
+  (if (not current-prefix-arg)
+      (monky-run-hg "qrefresh"
+                    "--config" "extensions.mq=")
+    ;; get last commit message
+    (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+      (monky-hg-insert
+       (list "log" "--config" "extensions.mq="
+             "--template" "{desc}" "-r" "-1")))
+    (monky-pop-to-log-edit 'qrefresh)))
 
 (defun monky-qremove (patch)
   (monky-run-hg "qremove" patch
@@ -2379,6 +2386,13 @@ With a non numeric prefix ARG, show all entries"
          (monky-run-async-with-input commit-buf
                                      monky-hg-executable
                                      "qnew" monky-log-edit-info
+                                     "--config" "extensions.mq="
+                                     "--logfile" "-")))
+      ('qrefresh
+       (with-current-buffer monky-log-edit-client-buffer
+         (monky-run-async-with-input commit-buf
+                                     monky-hg-executable
+                                     "qrefresh"
                                      "--config" "extensions.mq="
                                      "--logfile" "-")))))
   (erase-buffer)
