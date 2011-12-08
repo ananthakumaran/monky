@@ -1951,6 +1951,10 @@ With a non numeric prefix ARG, show all entries"
 
 (defvar monky-commit-buffer-name "*monky-commit*")
 
+(defun monky-empty-buffer-p (buffer)
+  (with-current-buffer buffer
+    (< (length (buffer-string)) 1)))
+
 (defun monky-show-commit (commit &optional select scroll)
   (monky-with-process
     (when (monky-section-p commit)
@@ -1961,11 +1965,12 @@ With a non numeric prefix ARG, show all entries"
     (let ((topdir (monky-get-root-dir))
           (buffer (get-buffer-create monky-commit-buffer-name)))
       (cond
-       (scroll
+       ((and scroll
+	     (not (monky-empty-buffer-p buffer)))
         (let ((win (get-buffer-window buffer)))
           (cond ((not win)
                  (display-buffer buffer))
-                (scroll
+                (t
                  (with-selected-window win
                    (funcall scroll))))))
        (t
