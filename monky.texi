@@ -135,7 +135,10 @@ Patches}, @emph{UnApplied Patches} and the @emph{Series}.
 @item S
 @tab push all the unapplied patches
 @item r
-@tab refresh(update) the current patch with the changes in working directory
+@tab refresh(update) the current patch with the changes in working
+directory
+@item C-u r
+@tab refresh the current patch and allows to edit the commit message
 @item R
 @tab rename the selected patch
 @item k
