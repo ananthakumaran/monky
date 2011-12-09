@@ -147,10 +147,12 @@ directory
 @tab create a new patch on top of current patch
 @item C-u N
 @tab same as N except this will also read the commit message for the patch
-@item f
+@item l
 @tab fold the selected patch into the current patch
-@item F
+@item f
 @tab apply(qfinish) the selected patch into repo history
+@item F
+@tab apply(qfinish) all applied patches into repo history
 @item G
 @tab reset the guards of the selected patch with new guards
 @end multitable
