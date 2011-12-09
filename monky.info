@@ -1,4 +1,4 @@
-This is monky.info, produced by makeinfo version 4.11 from monky.texi.
+This is monky.info, produced by makeinfo version 4.13 from monky.texi.
 
 Copyright (C) 2010 Anantha Kumaran.
 
@@ -143,7 +143,7 @@ File: monky.info,  Node: Queue,  Next: Using Hg Directly,  Prev: Branch,  Up: To
 10 Queue
 ********
 
-Use `M-x monky-queue' or `q' from the status buffer to view the queue
+Use `M-x monky-queue' or `Q' from the status buffer to view the queue
 buffer. The queue buffer will list the _Applied Patches_, _UnApplied
 Patches_ and the _Series_.
 
@@ -153,15 +153,18 @@ u           pop the selected patch and all the patches before it
 U           pop all the applied patches
 s           push the selected patch and all the patches before it
 S           push all the unapplied patches
-r           refresh(update) the current patch with the changes in
-            working directory
+r           refresh(update) the current patch with the changes in working
+            directory
+C-u r       refresh the current patch and allows to edit the commit
+            message
 R           rename the selected patch
 k           remove the selected patch
 N           create a new patch on top of current patch
 C-u N       same as N except this will also read the commit message for
             the patch
-f           fold the selected patch into the current patch
-F           apply(qfinish) the selected patch into repo history
+l           fold the selected patch into the current patch
+f           apply(qfinish) the selected patch into repo history
+F           apply(qfinish) all applied patches into repo history
 G           reset the guards of the selected patch with new guards
 
 
@@ -203,7 +206,7 @@ Node: Merged Files3164
 Node: Pushing and Pulling3642
 Node: Branch3979
 Node: Queue4185
-Node: Log5282
-Node: Using Hg Directly5812
+Node: Log5435
+Node: Using Hg Directly5965
 
 End Tag Table
