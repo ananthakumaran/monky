@@ -147,7 +147,7 @@ directory
 @tab create a new patch on top of current patch
 @item C-u N
 @tab same as N except this will also read the commit message for the patch
-@item l
+@item d
 @tab fold the selected patch into the current patch
 @item f
 @tab apply(qfinish) the selected patch into repo history

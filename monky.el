@@ -552,7 +552,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "N") 'monky-qnew)
     (define-key map (kbd "f") 'monky-qfinish-item)
     (define-key map (kbd "F") 'monky-qfinish-applied)
-    (define-key map (kbd "l") 'monky-qfold-item)
+    (define-key map (kbd "d") 'monky-qfold-item)
     (define-key map (kbd "G") 'monky-qguard-item)
     map))
 

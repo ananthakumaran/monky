@@ -162,7 +162,7 @@ k           remove the selected patch
 N           create a new patch on top of current patch
 C-u N       same as N except this will also read the commit message for
             the patch
-l           fold the selected patch into the current patch
+d           fold the selected patch into the current patch
 f           apply(qfinish) the selected patch into repo history
 F           apply(qfinish) all applied patches into repo history
 G           reset the guards of the selected patch with new guards
@@ -206,7 +206,7 @@ Node: Merged Files3164
 Node: Pushing and Pulling3642
 Node: Branch3979
 Node: Queue4185
-Node: Log5435
-Node: Using Hg Directly5965
+Node: Log5524
+Node: Using Hg Directly6054
 
 End Tag Table
