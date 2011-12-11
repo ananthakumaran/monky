@@ -529,6 +529,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "e") 'monky-log-show-more-entries)
     (define-key map (kbd "C") 'monky-checkout-item)
     (define-key map (kbd "B") 'monky-backout-item)
+    (define-key map (kbd "i") 'monky-qimport-item)
     map))
 
 (defvar monky-branches-mode-map
@@ -725,7 +726,11 @@ CMD is an external command that will be run with ARGS as arguments"
 
 (defun monky-current-section ()
   "Return the monky section at point."
-  (or (get-text-property (point) 'monky-section)
+  (monky-section-at (point)))
+
+(defun monky-section-at (pos)
+  "Return the monky section at position POS."
+  (or (get-text-property pos 'monky-section)
       monky-top-section))
 
 (defun monky-find-section-after (pos secs)
@@ -1938,6 +1943,20 @@ With a non numeric prefix ARG, show all entries"
                       "--limit" (number-to-string monky-log-cutoff-length)
                       "--template" "{node} {desc|firstline}\n")))
 
+(defun monky-next-sha1 (pos)
+  "Return position of next sha1 after given position POS"
+  (while (and pos
+              (not (equal (get-text-property pos 'face) 'monky-log-sha1)))
+    (setq pos (next-single-property-change pos 'face)))
+  pos)
+
+(defun monky-previous-sha1 (pos)
+  "Return position of previous sha1 before given position POS"
+  (while (and pos
+              (not (equal (get-text-property pos 'face) 'monky-log-sha1)))
+    (setq pos (previous-single-property-change pos 'face)))
+  pos)
+
 
 ;;; Commit mode
 
@@ -2269,6 +2288,11 @@ With a non numeric prefix ARG, show all entries"
   (monky-run-hg "qinit"
                 "--config" "extensions.mq="))
 
+(defun monky-qimport (node-1 &optional node-2)
+  (monky-run-hg "qimport" "--rev"
+                (if node-2 (concat node-1 ":" node-2) node-1)
+                "--config" "extensions.mq="))
+
 (defun monky-qrename (old-patch &optional new-patch)
   (let ((new-patch (or new-patch
                        (read-string "New Patch Name : "))))
@@ -2308,6 +2332,19 @@ With a non numeric prefix ARG, show all entries"
   (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
     (insert-file-contents monky-patch-series-file))
   (monky-pop-to-log-edit 'qreorder))
+
+(defun monky-qimport-item (start end)
+  (interactive "r")
+  (if (region-active-p)
+      (monky-section-action (item info "qnew")
+        ((log commits commit)
+         (monky-qimport
+          (monky-section-info (monky-section-at (monky-next-sha1 start)))
+          (monky-section-info (monky-section-at
+                               (monky-previous-sha1 (- end 1)))))))
+    (monky-section-action (item info "qnew")
+      ((log commits commit)
+       (monky-qimport info)))))
 
 (defun monky-qpop-item ()
   (interactive)
