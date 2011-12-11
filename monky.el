@@ -173,6 +173,30 @@ Many Monky faces inherit from this one by default."
   "Face for the message element of the log output."
   :group 'monky-faces)
 
+(defface monky-log-head-label-local
+  '((((class color) (background light))
+     :box t
+     :background "Grey85"
+     :foreground "LightSkyBlue4")
+    (((class color) (background dark))
+     :box t
+     :background "Grey13"
+     :foreground "LightSkyBlue1"))
+  "Face for local branch head labels shown in log buffer."
+  :group 'monky-faces)
+
+(defface monky-log-head-label-tags
+  '((((class color) (background light))
+     :box t
+     :background "LemonChiffon1"
+     :foreground "goldenrod4")
+    (((class color) (background dark))
+     :box t
+     :background "LemonChiffon1"
+     :foreground "goldenrod4"))
+  "Face for tag labels shown in log buffer."
+  :group 'monky-faces)
+
 (defface monky-queue-active
   '((((class color) (background light))
      :box t
@@ -1861,10 +1885,17 @@ before the last command."
 
 (defvar monky-log-buffer-name "*monky-log*")
 
-(defun monky-present-log-line (graph id message)
+(defun monky-present-log-line (graph id branches tags message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
           "  "
           graph
+          " "
+          (unless (or (string= branches "") (string= branches "None"))
+            (concat
+             (propertize branches 'face 'monky-log-head-label-local) " "))
+          (unless (string= tags "")
+            (concat
+             (propertize tags 'face 'monky-log-head-label-tags) " "))
           (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
@@ -1875,16 +1906,38 @@ before the last command."
       (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
       (monky-log-mode t))))
 
-(defvar monky-log-graph-re "^\\([-\\/@o+|\s]+\s*\\) \\([a-z0-9]\\{40\\}\\)\\(.*\\)$")
+(defvar monky-log-graph-re
+  (concat
+   "^\\([-\\/@o+|\s]+\s*\\) "           ; 1. graph
+   "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
+   "<branches>\\([^<]*\\)</branches>"   ; 3. branches
+   "<tags>\\([^<]*\\)</tags>"           ; 4. tags
+   "\\(.*\\)$"                          ; 5. msg
+   ))
+
+(defvar monky-log-graph-template
+  (concat
+   "{node} "
+   "<branches>{branches|stringify|escape}</branches>"
+   "<tags>{tags|stringify|escape}</tags>"
+   "{desc|firstline}\n"))
+
+(defun monky-decode-xml-entities (str)
+  (setq str (replace-regexp-in-string "&lt;" "<" str))
+  (setq str (replace-regexp-in-string "&gt;" ">" str))
+  (setq str (replace-regexp-in-string "&amp;" "&" str))
+  str)
 
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
       (let ((graph (match-string 1))
             (id (match-string 2))
-            (msg (match-string 3)))
+            (branches (match-string 3))
+            (tags (monky-decode-xml-entities (match-string 4)))
+            (msg (monky-decode-xml-entities (match-string 5))))
         (monky-delete-line)
         (monky-with-section id 'commit
-          (insert (monky-present-log-line graph id msg))
+          (insert (monky-present-log-line graph id branches tags msg))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
           (forward-line)
@@ -1941,7 +1994,7 @@ With a non numeric prefix ARG, show all entries"
                       "--config" "extensions.graphlog="
                       "-G"
                       "--limit" (number-to-string monky-log-cutoff-length)
-                      "--template" "{node} {desc|firstline}\n")))
+                      "--template" monky-log-graph-template)))
 
 (defun monky-next-sha1 (pos)
   "Return position of next sha1 after given position POS"
