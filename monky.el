@@ -173,6 +173,30 @@ Many Monky faces inherit from this one by default."
   "Face for the message element of the log output."
   :group 'monky-faces)
 
+(defface monky-log-head-label-local
+  '((((class color) (background light))
+     :box t
+     :background "Grey85"
+     :foreground "LightSkyBlue4")
+    (((class color) (background dark))
+     :box t
+     :background "Grey13"
+     :foreground "LightSkyBlue1"))
+  "Face for local branch head labels shown in log buffer."
+  :group 'monky-faces)
+
+(defface monky-log-head-label-tags
+  '((((class color) (background light))
+     :box t
+     :background "LemonChiffon1"
+     :foreground "goldenrod4")
+    (((class color) (background dark))
+     :box t
+     :background "LemonChiffon1"
+     :foreground "goldenrod4"))
+  "Face for tag labels shown in log buffer."
+  :group 'monky-faces)
+
 (defface monky-queue-active
   '((((class color) (background light))
      :box t
@@ -529,6 +553,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "e") 'monky-log-show-more-entries)
     (define-key map (kbd "C") 'monky-checkout-item)
     (define-key map (kbd "B") 'monky-backout-item)
+    (define-key map (kbd "i") 'monky-qimport-item)
     map))
 
 (defvar monky-branches-mode-map
@@ -550,9 +575,11 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "R") 'monky-qrename-item)
     (define-key map (kbd "k") 'monky-qremove-item)
     (define-key map (kbd "N") 'monky-qnew)
-    (define-key map (kbd "f") 'monky-qfold-item)
-    (define-key map (kbd "F") 'monky-qfinish-item)
+    (define-key map (kbd "f") 'monky-qfinish-item)
+    (define-key map (kbd "F") 'monky-qfinish-applied)
+    (define-key map (kbd "d") 'monky-qfold-item)
     (define-key map (kbd "G") 'monky-qguard-item)
+    (define-key map (kbd "o") 'monky-qreorder)
     map))
 
 (defvar monky-log-edit-mode-map
@@ -723,7 +750,11 @@ CMD is an external command that will be run with ARGS as arguments"
 
 (defun monky-current-section ()
   "Return the monky section at point."
-  (or (get-text-property (point) 'monky-section)
+  (monky-section-at (point)))
+
+(defun monky-section-at (pos)
+  "Return the monky section at position POS."
+  (or (get-text-property pos 'monky-section)
       monky-top-section))
 
 (defun monky-find-section-after (pos secs)
@@ -1854,10 +1885,16 @@ before the last command."
 
 (defvar monky-log-buffer-name "*monky-log*")
 
-(defun monky-present-log-line (graph id message)
+(defun monky-present-log-line (graph id branches tags message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
-          "  "
+          " "
           graph
+          (unless (or (string= branches "") (string= branches "None"))
+            (concat
+             (propertize branches 'face 'monky-log-head-label-local) " "))
+          (unless (string= tags "")
+            (concat
+             (propertize tags 'face 'monky-log-head-label-tags) " "))
           (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
@@ -1868,22 +1905,44 @@ before the last command."
       (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
       (monky-log-mode t))))
 
-(defvar monky-log-graph-re "^\\([-\\/@o+|\s]+\s*\\) \\([a-z0-9]\\{40\\}\\)\\(.*\\)$")
+(defvar monky-log-graph-re
+  (concat
+   "^\\([-\\/@o+|\s]+\s*\\) "           ; 1. graph
+   "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
+   "<branches>\\([^<]*\\)</branches>"   ; 3. branches
+   "<tags>\\([^<]*\\)</tags>"           ; 4. tags
+   "\\(.*\\)$"                          ; 5. msg
+   ))
+
+(defvar monky-log-graph-template
+  (concat
+   "{node} "
+   "<branches>{branches|stringify|escape}</branches>"
+   "<tags>{tags|stringify|escape}</tags>"
+   "{desc|firstline}\n"))
+
+(defun monky-decode-xml-entities (str)
+  (setq str (replace-regexp-in-string "&lt;" "<" str))
+  (setq str (replace-regexp-in-string "&gt;" ">" str))
+  (setq str (replace-regexp-in-string "&amp;" "&" str))
+  str)
 
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
       (let ((graph (match-string 1))
             (id (match-string 2))
-            (msg (match-string 3)))
+            (branches (match-string 3))
+            (tags (monky-decode-xml-entities (match-string 4)))
+            (msg (monky-decode-xml-entities (match-string 5))))
         (monky-delete-line)
         (monky-with-section id 'commit
-          (insert (monky-present-log-line graph id msg))
+          (insert (monky-present-log-line graph id branches tags msg))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
           (forward-line)
           (when (looking-at "^\\([\\/@o+-|\s]+\s*\\)$")
             (let ((graph (match-string 1)))
-              (insert "          ")
+              (insert "         ")
               (forward-line))))
         t)
     nil))
@@ -1934,7 +1993,21 @@ With a non numeric prefix ARG, show all entries"
                       "--config" "extensions.graphlog="
                       "-G"
                       "--limit" (number-to-string monky-log-cutoff-length)
-                      "--template" "{node} {desc|firstline}\n")))
+                      "--template" monky-log-graph-template)))
+
+(defun monky-next-sha1 (pos)
+  "Return position of next sha1 after given position POS"
+  (while (and pos
+              (not (equal (get-text-property pos 'face) 'monky-log-sha1)))
+    (setq pos (next-single-property-change pos 'face)))
+  pos)
+
+(defun monky-previous-sha1 (pos)
+  "Return position of previous sha1 before given position POS"
+  (while (and pos
+              (not (equal (get-text-property pos 'face) 'monky-log-sha1)))
+    (setq pos (previous-single-property-change pos 'face)))
+  pos)
 
 
 ;;; Commit mode
@@ -2079,6 +2152,8 @@ With a non numeric prefix ARG, show all entries"
 (defvar monky-queue-buffer-name "*monky-queue*")
 
 (defvar monky-patches-dir ".hg/patches/")
+
+(defvar monky-patch-series-file (concat monky-patches-dir "series"))
 
 (defun monky-insert-patch (patch)
   (let ((p (point))
@@ -2265,6 +2340,11 @@ With a non numeric prefix ARG, show all entries"
   (monky-run-hg "qinit"
                 "--config" "extensions.mq="))
 
+(defun monky-qimport (node-1 &optional node-2)
+  (monky-run-hg "qimport" "--rev"
+                (if node-2 (concat node-1 ":" node-2) node-1)
+                "--config" "extensions.mq="))
+
 (defun monky-qrename (old-patch &optional new-patch)
   (let ((new-patch (or new-patch
                        (read-string "New Patch Name : "))))
@@ -2291,6 +2371,32 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-qfinish (patch)
   (monky-run-hg "qfinish" patch
                 "--config" "extensions.mq="))
+
+(defun monky-qfinish-applied ()
+  (interactive)
+  (monky-run-hg "qfinish" "--applied"
+                "--config" "extensions.mq="))
+
+(defun monky-qreorder ()
+  "Pop all patches and edit .hg/patches/series file to reorder them"
+  (interactive)
+  (monky-qpop-all)
+  (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+    (insert-file-contents monky-patch-series-file))
+  (monky-pop-to-log-edit 'qreorder))
+
+(defun monky-qimport-item (start end)
+  (interactive "r")
+  (if (region-active-p)
+      (monky-section-action (item info "qnew")
+        ((log commits commit)
+         (monky-qimport
+          (monky-section-info (monky-section-at (monky-next-sha1 start)))
+          (monky-section-info (monky-section-at
+                               (monky-previous-sha1 (- end 1)))))))
+    (monky-section-action (item info "qnew")
+      ((log commits commit)
+       (monky-qimport info)))))
 
 (defun monky-qpop-item ()
   (interactive)
@@ -2394,7 +2500,12 @@ With a non numeric prefix ARG, show all entries"
                                      monky-hg-executable
                                      "qrefresh"
                                      "--config" "extensions.mq="
-                                     "--logfile" "-")))))
+                                     "--logfile" "-")))
+      ('qreorder
+       (with-current-buffer monky-log-edit-buffer-name
+           (write-region (point-min) (point-max) monky-patch-series-file))
+       (with-current-buffer monky-queue-buffer-name
+         (monky-refresh)))))
   (erase-buffer)
   (bury-buffer)
   (monky-restore-pre-log-edit-window-configuration))

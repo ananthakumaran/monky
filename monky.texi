@@ -147,12 +147,19 @@ directory
 @tab create a new patch on top of current patch
 @item C-u N
 @tab same as N except this will also read the commit message for the patch
-@item f
+@item i
+@tab import(qimport) patches from change sets. a change set at the point
+or change sets in a selected region (when selected) will be imported.
+@item d
 @tab fold the selected patch into the current patch
-@item F
+@item f
 @tab apply(qfinish) the selected patch into repo history
+@item F
+@tab apply(qfinish) all applied patches into repo history
 @item G
 @tab reset the guards of the selected patch with new guards
+@item o
+@tab pop all patches and edit .hg/patches/series file to reorder them
 @end multitable
 
 
