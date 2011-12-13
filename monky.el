@@ -1887,9 +1887,8 @@ before the last command."
 
 (defun monky-present-log-line (graph id branches tags message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
-          "  "
-          graph
           " "
+          graph
           (unless (or (string= branches "") (string= branches "None"))
             (concat
              (propertize branches 'face 'monky-log-head-label-local) " "))
@@ -1943,7 +1942,7 @@ before the last command."
           (forward-line)
           (when (looking-at "^\\([\\/@o+-|\s]+\s*\\)$")
             (let ((graph (match-string 1)))
-              (insert "          ")
+              (insert "         ")
               (forward-line))))
         t)
     nil))
