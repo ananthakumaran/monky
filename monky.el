@@ -2306,6 +2306,7 @@ With a non numeric prefix ARG, show all entries"
   (interactive)
   (monky-qpop-all)
   (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+    (erase-buffer)
     (insert-file-contents monky-patch-series-file))
   (monky-pop-to-log-edit 'qreorder))
 
@@ -2414,9 +2415,9 @@ With a non numeric prefix ARG, show all entries"
                                      "--logfile" "-")))
       ('qreorder
        (with-current-buffer monky-log-edit-buffer-name
-           (write-region (point-min) (point-max) monky-patch-series-file))
+	 (write-region (point-min) (point-max) monky-patch-series-file))
        (with-current-buffer monky-queue-buffer-name
-         (monky-refresh)))))
+	 (monky-refresh)))))
   (erase-buffer)
   (bury-buffer)
   (monky-restore-pre-log-edit-window-configuration))
