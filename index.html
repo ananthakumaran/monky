@@ -247,6 +247,9 @@ directory
 </td><td valign="top" width="85%">create a new patch on top of current patch
 <br></td></tr><tr align="left"><td valign="top" width="15%">C-u N
 </td><td valign="top" width="85%">same as N except this will also read the commit message for the patch
+<br></td></tr><tr align="left"><td valign="top" width="15%">i
+</td><td valign="top" width="85%">import(qimport) patches from change sets. a change set at the point
+or change sets in a selected region (when selected) will be imported. 
 <br></td></tr><tr align="left"><td valign="top" width="15%">d
 </td><td valign="top" width="85%">fold the selected patch into the current patch
 <br></td></tr><tr align="left"><td valign="top" width="15%">f
@@ -255,6 +258,8 @@ directory
 </td><td valign="top" width="85%">apply(qfinish) all applied patches into repo history
 <br></td></tr><tr align="left"><td valign="top" width="15%">G
 </td><td valign="top" width="85%">reset the guards of the selected patch with new guards
+<br></td></tr><tr align="left"><td valign="top" width="15%">o
+</td><td valign="top" width="85%">pop all patches and edit .hg/patches/series file to reorder them
    <br></td></tr></table>
 
 <div class="node">
