@@ -155,6 +155,8 @@ directory
 @tab apply(qfinish) all applied patches into repo history
 @item G
 @tab reset the guards of the selected patch with new guards
+@item o
+@tab pop all patches and edit .hg/patches/series file to reorder them
 @end multitable
 
 

@@ -554,6 +554,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "F") 'monky-qfinish-applied)
     (define-key map (kbd "d") 'monky-qfold-item)
     (define-key map (kbd "G") 'monky-qguard-item)
+    (define-key map (kbd "o") 'monky-qreorder)
     map))
 
 (defvar monky-log-edit-mode-map
@@ -2081,6 +2082,8 @@ With a non numeric prefix ARG, show all entries"
 
 (defvar monky-patches-dir ".hg/patches/")
 
+(defvar monky-patch-series-file (concat monky-patches-dir "series"))
+
 (defun monky-insert-patch (patch)
   (let ((p (point))
         (monky-hide-diffs nil))
@@ -2298,6 +2301,14 @@ With a non numeric prefix ARG, show all entries"
   (monky-run-hg "qfinish" "--applied"
                 "--config" "extensions.mq="))
 
+(defun monky-qreorder ()
+  "Pop all patches and edit .hg/patches/series file to reorder them"
+  (interactive)
+  (monky-qpop-all)
+  (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+    (insert-file-contents monky-patch-series-file))
+  (monky-pop-to-log-edit 'qreorder))
+
 (defun monky-qpop-item ()
   (interactive)
   (monky-section-action (item info "qpop")
@@ -2400,7 +2411,12 @@ With a non numeric prefix ARG, show all entries"
                                      monky-hg-executable
                                      "qrefresh"
                                      "--config" "extensions.mq="
-                                     "--logfile" "-")))))
+                                     "--logfile" "-")))
+      ('qreorder
+       (with-current-buffer monky-log-edit-buffer-name
+           (write-region (point-min) (point-max) monky-patch-series-file))
+       (with-current-buffer monky-queue-buffer-name
+         (monky-refresh)))))
   (erase-buffer)
   (bury-buffer)
   (monky-restore-pre-log-edit-window-configuration))
