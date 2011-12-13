@@ -1,4 +1,4 @@
-This is monky.info, produced by makeinfo version 4.13 from monky.texi.
+This is monky.info, produced by makeinfo version 4.11 from monky.texi.
 
 Copyright (C) 2010 Anantha Kumaran.
 
@@ -206,7 +206,7 @@ Node: Merged Files3164
 Node: Pushing and Pulling3642
 Node: Branch3979
 Node: Queue4185
-Node: Log5524
-Node: Using Hg Directly6054
+Node: Log5435
+Node: Using Hg Directly5965
 
 End Tag Table

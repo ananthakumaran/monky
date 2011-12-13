@@ -5,7 +5,7 @@ DIST_FILES=$(ELS) Makefile monky.texi monky.info README.md monky-pkg.el.in monky
 monky-pkg.el: monky-pkg.el.in
 	sed -e s/@VERSION@/$(VERSION)/ < $< > $@
 
-monky.info:
+monky.info: monky.texi
 	makeinfo monky.texi
 
 update-doc: monky.info
