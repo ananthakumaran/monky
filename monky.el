@@ -2152,8 +2152,10 @@ With a non numeric prefix ARG, show all entries"
 (defvar monky-queue-buffer-name "*monky-queue*")
 
 (defvar monky-patches-dir ".hg/patches/")
+(make-variable-buffer-local 'monky-patches-dir)
 
-(defvar monky-patch-series-file (concat monky-patches-dir "series"))
+(defun monky-patch-series-file ()
+  (concat monky-patches-dir "series"))
 
 (defun monky-insert-patch (patch)
   (let ((p (point))
@@ -2266,14 +2268,13 @@ With a non numeric prefix ARG, show all entries"
                     "qselect" "--config" "extensions.mq="))
 
 (defun monky-refresh-queue-buffer ()
-  (let ((monky-patches-dir monky-patches-dir))
-    (monky-create-buffer-sections
-      (monky-with-section 'queue nil
-        (monky-insert-queue-queues)
-        (monky-insert-active-guards)
-        (monky-insert-queue-applied)
-        (monky-insert-queue-unapplied)
-        (monky-insert-queue-series)))))
+  (monky-create-buffer-sections
+    (monky-with-section 'queue nil
+      (monky-insert-queue-queues)
+      (monky-insert-active-guards)
+      (monky-insert-queue-applied)
+      (monky-insert-queue-unapplied)
+      (monky-insert-queue-series))))
 
 (defun monky-queue ()
   (interactive)
@@ -2380,11 +2381,12 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-qreorder ()
   "Pop all patches and edit .hg/patches/series file to reorder them"
   (interactive)
-  (monky-qpop-all)
-  (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
-    (erase-buffer)
-    (insert-file-contents monky-patch-series-file))
-  (monky-pop-to-log-edit 'qreorder))
+  (let ((series (monky-patch-series-file)))
+   (monky-qpop-all)
+   (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+     (erase-buffer)
+     (insert-file-contents series))
+   (monky-pop-to-log-edit 'qreorder)))
 
 (defun monky-qimport-item ()
   (interactive)
@@ -2501,10 +2503,13 @@ With a non numeric prefix ARG, show all entries"
                                      "--config" "extensions.mq="
                                      "--logfile" "-")))
       ('qreorder
-       (with-current-buffer monky-log-edit-buffer-name
-	 (write-region (point-min) (point-max) monky-patch-series-file))
-       (with-current-buffer monky-queue-buffer-name
-	 (monky-refresh)))))
+       (let* ((queue-buffer (monky-find-buffer 'queue))
+	      (series (with-current-buffer queue-buffer
+			(monky-patch-series-file))))
+	(with-current-buffer monky-log-edit-buffer-name
+	  (write-region (point-min) (point-max) series))
+	(with-current-buffer queue-buffer
+	  (monky-refresh))))))
   (erase-buffer)
   (bury-buffer)
   (monky-restore-pre-log-edit-window-configuration))
