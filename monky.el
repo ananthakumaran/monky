@@ -1833,7 +1833,7 @@ before the last command."
                       "status" "--modified" "--added" "--removed")))
 ;;; Status mode
 
-(defun monkey-refresh-status ()
+(defun monky-refresh-status ()
   (setq monky-parents '()
         monky-merged-files '())
   (monky-create-buffer-sections
@@ -1869,7 +1869,7 @@ before the last command."
                              (file-name-nondirectory
                               (directory-file-name rootdir)) "*")))))
       (pop-to-buffer buf)
-      (monky-mode-init rootdir 'status #'monkey-refresh-status)
+      (monky-mode-init rootdir 'status #'monky-refresh-status)
       (monky-status-mode t))))
 
 ;;; Log mode
