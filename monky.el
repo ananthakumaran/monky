@@ -328,7 +328,7 @@ Many Monky faces inherit from this one by default."
   (delete-process proc))
 
 (defun monky-cmdserver-runcommand (&rest cmd-and-args)
-  (setq monky-error-message nil)
+  (setq monky-cmd-error-message nil)
   (with-current-buffer (process-buffer monky-cmd-process)
     (setq buffer-read-only nil)
     (erase-buffer))
@@ -2334,17 +2334,15 @@ With a non numeric prefix ARG, show all entries"
     (insert-file-contents monky-patch-series-file))
   (monky-pop-to-log-edit 'qreorder))
 
-(defun monky-qimport-item (start end)
-  (interactive "r")
-  (if (region-active-p)
-      (monky-section-action (item info "qnew")
-        ((log commits commit)
-         (monky-qimport
-          (monky-section-info (monky-section-at (monky-next-sha1 start)))
-          (monky-section-info (monky-section-at
-                               (monky-previous-sha1 (- end 1)))))))
-    (monky-section-action (item info "qnew")
-      ((log commits commit)
+(defun monky-qimport-item ()
+  (interactive)
+  (monky-section-action (item info "qimport")
+    ((log commits commit)
+     (if (region-active-p)
+	 (monky-qimport
+	  (monky-section-info (monky-section-at (monky-next-sha1 (region-beginning))))
+	  (monky-section-info (monky-section-at
+			       (monky-previous-sha1 (- (region-end) 1)))))
        (monky-qimport info)))))
 
 (defun monky-qpop-item ()
