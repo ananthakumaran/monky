@@ -589,7 +589,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "C-x C-s")
       (lambda ()
         (interactive)
-        (message "Not saved. Use C-c C-c to finalize this commit message.")))
+        (message "Not saved. Use C-c C-c to finalize this %s." monky-log-edit-operation)))
     map))
 
 ;;; Sections
