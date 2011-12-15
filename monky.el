@@ -2193,8 +2193,12 @@ With a non numeric prefix ARG, show all entries"
   (monky-wash-queue-insert-patch #'insert-file-contents))
 
 (defun monky-wash-queue-qdiff ()
+  (save-restriction
+    (when (= (forward-line) 0)
+      (delete-region (point) (point-max)))
+    (goto-char (point-min)))
   (monky-wash-queue-insert-patch
-   (lambda (&rest args) (monky-hg-insert (list "qdiff")))))
+     (lambda (&rest args) (monky-hg-insert (list "qdiff")))))
 
 (defun monky-wash-queue-insert-patch (inserter)
   (if (looking-at "^\\([^\n]+\\)$")
@@ -2262,7 +2266,7 @@ With a non numeric prefix ARG, show all entries"
 ;;; Qdiff
 (defun monky-insert-queue-qdiff ()
   (monky-hg-section 'qdiff "Qdiff:" #'monky-wash-queue-qdiff
-                    "qapplied" "--last" "--config" "extensions.mq="))
+                    "qapplied" "--config" "extensions.mq="))
 
 (defun monky-wash-active-guards ()
   (if (looking-at "^no active guards")
