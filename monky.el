@@ -2157,12 +2157,12 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-patch-series-file ()
   (concat monky-patches-dir "series"))
 
-(defun monky-insert-patch (patch)
+(defun monky-insert-patch (patch inserter &rest args)
   (let ((p (point))
         (monky-hide-diffs nil))
     (save-restriction
       (narrow-to-region p p)
-      (insert-file-contents (concat monky-patches-dir patch))
+      (apply inserter args)
       (goto-char (point-max))
       (if (not (eq (char-before) ?\n))
           (insert "\n"))
@@ -2190,6 +2190,13 @@ With a non numeric prefix ARG, show all entries"
     (insert "\n")))
 
 (defun monky-wash-queue-patch ()
+  (monky-wash-queue-insert-patch #'insert-file-contents))
+
+(defun monky-wash-queue-qdiff ()
+  (monky-wash-queue-insert-patch
+   (lambda (&rest args) (monky-hg-insert (list "qdiff")))))
+
+(defun monky-wash-queue-insert-patch (inserter)
   (if (looking-at "^\\([^\n]+\\)$")
       (let ((patch (match-string 1)))
         (monky-delete-line)
@@ -2198,7 +2205,8 @@ With a non numeric prefix ARG, show all entries"
             (monky-set-section-info patch)
             (insert "\t" patch)
             (monky-insert-guards patch)
-            (monky-insert-patch patch)
+            (funcall #'monky-insert-patch
+                     patch inserter (concat monky-patches-dir patch))
             (forward-line)))
         t)
     nil))
@@ -2251,6 +2259,11 @@ With a non numeric prefix ARG, show all entries"
   (monky-hg-section 'qseries "Series:" #'monky-wash-queue-patches
                     "qseries" "--config" "extensions.mq="))
 
+;;; Qdiff
+(defun monky-insert-queue-qdiff ()
+  (monky-hg-section 'qdiff "Qdiff:" #'monky-wash-queue-qdiff
+                    "qapplied" "--last" "--config" "extensions.mq="))
+
 (defun monky-wash-active-guards ()
   (if (looking-at "^no active guards")
       (monky-delete-line t)
@@ -2273,6 +2286,7 @@ With a non numeric prefix ARG, show all entries"
       (monky-insert-untracked-files)
       (monky-insert-missing-files)
       (monky-insert-changes)
+      (monky-insert-queue-qdiff)
       (monky-insert-queue-queues)
       (monky-insert-active-guards)
       (monky-insert-queue-applied)
