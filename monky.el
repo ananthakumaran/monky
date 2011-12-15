@@ -2270,6 +2270,9 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-refresh-queue-buffer ()
   (monky-create-buffer-sections
     (monky-with-section 'queue nil
+      (monky-insert-untracked-files)
+      (monky-insert-missing-files)
+      (monky-insert-changes)
       (monky-insert-queue-queues)
       (monky-insert-active-guards)
       (monky-insert-queue-applied)
