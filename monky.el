@@ -2402,8 +2402,9 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-qrefresh ()
   (interactive)
   (if (not current-prefix-arg)
-      (monky-run-hg "qrefresh"
-                    "--config" "extensions.mq=")
+      (apply #'monky-run-hg "qrefresh"
+             "--config" "extensions.mq="
+             (append monky-staged-files monky-queue-staged-files))
     ;; get last commit message
     (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
       (monky-hg-insert
@@ -2631,11 +2632,11 @@ With a non numeric prefix ARG, show all entries"
                                      "--logfile" "-")))
       ('qrefresh
        (with-current-buffer monky-log-edit-client-buffer
-         (monky-run-async-with-input commit-buf
-                                     monky-hg-executable
-                                     "qrefresh"
-                                     "--config" "extensions.mq="
-                                     "--logfile" "-")))
+         (apply #'monky-run-async-with-input commit-buf
+                monky-hg-executable "qrefresh"
+                "--config" "extensions.mq="
+                "--logfile" "-"
+                (append monky-staged-files monky-queue-staged-files))))
       ('qreorder
        (let* ((queue-buffer (monky-find-buffer 'queue))
 	      (series (with-current-buffer queue-buffer
