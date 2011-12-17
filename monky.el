@@ -1570,6 +1570,32 @@ before the last command."
                     (equal section (caar item)))
                   (monky-hg-config))))
 
+(defvar monky-el-directory (file-name-directory load-file-name)
+  "The parent directory of monky.el")
+
+(defun monky-get-style-path (filename)
+  (concat (file-name-as-directory (concat monky-el-directory "style"))
+          filename))
+
+(defvar monky-hg-style-files
+  (monky-get-style-path "files"))
+
+(defvar monky-hg-style-files-status
+  (monky-get-style-path "files-status"))
+
+(defvar monky-hg-style-tags
+  (monky-get-style-path "tags"))
+
+(defun monky-hg-log-files (revision)
+  (monky-hg-lines "log"
+                  "--style" monky-hg-style-files
+                  "--rev" revision))
+
+(defun monky-hg-log-tags (revision)
+  (monky-hg-lines "log"
+                  "--style" monky-hg-style-tags
+                  "--rev" revision))
+
 ;;; Washers
 
 (defmacro monky-with-wash-status (status file &rest body)
@@ -1698,9 +1724,9 @@ before the last command."
 (defun monky-wash-diffs ()
   (monky-wash-sequence #'monky-wash-diff))
 
-(defun monky-insert-diff (file &optional status)
+(defun monky-insert-diff (file &optional status cmd)
   (let ((p (point)))
-    (monky-hg-insert (list "diff" file))
+    (monky-hg-insert (list (or cmd "diff") file))
     (if (not (eq (char-before) ?\n))
         (insert "\n"))
     (save-restriction
@@ -2193,12 +2219,14 @@ With a non numeric prefix ARG, show all entries"
   (monky-wash-queue-insert-patch #'insert-file-contents))
 
 (defun monky-wash-queue-qdiff ()
-  (save-restriction
-    (when (= (forward-line) 0)
-      (delete-region (point) (point-max)))
-    (goto-char (point-min)))
-  (monky-wash-queue-insert-patch
-     (lambda (&rest args) (monky-hg-insert (list "qdiff")))))
+  (monky-wash-sequence
+   (monky-with-wash-status status file
+     (let ((monky-section-hidden-default monky-hide-diffs))
+       (if (or monky-staged-all-files
+               (member file monky-old-staged-files))
+           (monky-stage-file file)
+         (monky-with-section file 'diff
+           (monky-insert-diff file status "qdiff")))))))
 
 (defun monky-wash-queue-insert-patch (inserter)
   (if (looking-at "^\\([^\n]+\\)$")
@@ -2265,8 +2293,10 @@ With a non numeric prefix ARG, show all entries"
 
 ;;; Qdiff
 (defun monky-insert-queue-qdiff ()
-  (monky-hg-section 'qdiff "Qdiff:" #'monky-wash-queue-qdiff
-                    "qapplied" "--config" "extensions.mq="))
+  (when (member "qtip" (monky-hg-log-tags "-1"))
+    (monky-hg-section 'qdiff "Qdiff:" #'monky-wash-queue-qdiff
+                      "log" "--style" monky-hg-style-files-status
+                      "--rev" "qtip")))
 
 (defun monky-wash-active-guards ()
   (if (looking-at "^no active guards")
