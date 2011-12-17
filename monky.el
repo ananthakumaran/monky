@@ -2303,10 +2303,11 @@ With a non numeric prefix ARG, show all entries"
   (when monky-qtip-p-cached
     (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
     (setq monky-queue-staged-files '())
-    (monky-hg-section 'discarding "Discarding (qdiff):"
-                      #'monky-wash-queue-discarding
-                      "log" "--style" monky-hg-style-files-status
-                      "--rev" "qtip")))
+    (let ((monky-hide-diffs t))
+      (monky-hg-section 'discarding "Discarding (qdiff):"
+                        #'monky-wash-queue-discarding
+                        "log" "--style" monky-hg-style-files-status
+                        "--rev" "qtip"))))
 
 (defun monky-insert-queue-staged-changes ()
   (when (and monky-qtip-p-cached
