@@ -2299,7 +2299,7 @@ With a non numeric prefix ARG, show all entries"
 
 ;;; Qdiff
 (defun monky-insert-queue-discarding ()
-  (when (monky-qtip-p)
+  (when monky-qtip-p-cached
     (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
     (setq monky-queue-staged-files '())
     (monky-hg-section 'discarding "Discarding (qdiff):"
@@ -2308,7 +2308,7 @@ With a non numeric prefix ARG, show all entries"
                       "--rev" "qtip")))
 
 (defun monky-insert-queue-staged-changes ()
-  (when (monky-qtip-p)
+  (when (and monky-qtip-p-cached monky-queue-staged-files)
     (monky-with-section 'queue-staged nil
       (insert (propertize "Staged changes (qdiff):"
                           'face 'monky-section-title) "\n")
@@ -2347,6 +2347,7 @@ With a non numeric prefix ARG, show all entries"
   (setq monky-queue-staged-files (delete file monky-queue-staged-files)))
 
 (defun monky-refresh-queue-buffer ()
+  (setq monky-qtip-p-cached (monky-qtip-p)) ; not working inside macro?
   (monky-create-buffer-sections
     (monky-with-section 'queue nil
       (monky-insert-untracked-files)
