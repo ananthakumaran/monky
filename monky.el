@@ -1586,15 +1586,19 @@ before the last command."
 (defvar monky-hg-style-tags
   (monky-get-style-path "tags"))
 
-(defun monky-hg-log-files (revision)
-  (monky-hg-lines "log"
-                  "--style" monky-hg-style-files
-                  "--rev" revision))
+(defun monky-hg-log-files (revision &rest args)
+  (apply #'monky-hg-lines "log"
+         "--style" monky-hg-style-files
+         "--rev" revision args))
 
-(defun monky-hg-log-tags (revision)
-  (monky-hg-lines "log"
-                  "--style" monky-hg-style-tags
-                  "--rev" revision))
+(defun monky-hg-log-tags (revision &rest args)
+  (apply #'monky-hg-lines "log"
+         "--style" monky-hg-style-tags
+         "--rev" revision args))
+
+(defun monky-qtip-p ()
+  (member "qtip" (monky-hg-log-tags "-1" "--config" "extensions.mq=")))
+
 
 ;;; Washers
 
@@ -2295,7 +2299,7 @@ With a non numeric prefix ARG, show all entries"
 
 ;;; Qdiff
 (defun monky-insert-queue-discarding ()
-  (when (member "qtip" (monky-hg-log-tags "-1"))
+  (when (monky-qtip-p)
     (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
     (setq monky-queue-staged-files '())
     (monky-hg-section 'discarding "Discarding (qdiff):"
@@ -2304,7 +2308,7 @@ With a non numeric prefix ARG, show all entries"
                       "--rev" "qtip")))
 
 (defun monky-insert-queue-staged-changes ()
-  (when monky-queue-staged-files
+  (when (monky-qtip-p)
     (monky-with-section 'queue-staged nil
       (insert (propertize "Staged changes (qdiff):"
                           'face 'monky-section-title) "\n")
