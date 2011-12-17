@@ -1790,7 +1790,8 @@ before the last command."
       (let ((monky-section-hidden-default t))
         (dolist (file monky-staged-files)
           (monky-with-section file 'diff
-            (monky-insert-diff file))))))
+            (monky-insert-diff file)))))
+    (insert "\n"))
   (setq monky-staged-all-files nil))
 
 
@@ -2218,15 +2219,16 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-wash-queue-patch ()
   (monky-wash-queue-insert-patch #'insert-file-contents))
 
-(defun monky-wash-queue-qdiff ()
+(defun monky-wash-queue-discarding ()
   (monky-wash-sequence
    (monky-with-wash-status status file
      (let ((monky-section-hidden-default monky-hide-diffs))
-       (if (or monky-staged-all-files
-               (member file monky-old-staged-files))
-           (monky-stage-file file)
+       (if (or monky-queue-staged-all-files
+               (member file monky-queue-old-staged-files))
+           (monky-queue-stage-file file)
          (monky-with-section file 'diff
-           (monky-insert-diff file status "qdiff")))))))
+           (monky-insert-diff file status "qdiff"))))))
+  (setq monky-queue-staged-all-files nil))
 
 (defun monky-wash-queue-insert-patch (inserter)
   (if (looking-at "^\\([^\n]+\\)$")
@@ -2292,11 +2294,25 @@ With a non numeric prefix ARG, show all entries"
                     "qseries" "--config" "extensions.mq="))
 
 ;;; Qdiff
-(defun monky-insert-queue-qdiff ()
+(defun monky-insert-queue-discarding ()
   (when (member "qtip" (monky-hg-log-tags "-1"))
-    (monky-hg-section 'qdiff "Qdiff:" #'monky-wash-queue-qdiff
+    (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
+    (setq monky-queue-staged-files '())
+    (monky-hg-section 'discarding "Discarding (qdiff):"
+                      #'monky-wash-queue-discarding
                       "log" "--style" monky-hg-style-files-status
                       "--rev" "qtip")))
+
+(defun monky-insert-queue-staged-changes ()
+  (when monky-queue-staged-files
+    (monky-with-section 'queue-staged nil
+      (insert (propertize "Staged changes (qdiff):"
+                          'face 'monky-section-title) "\n")
+      (let ((monky-section-hidden-default t))
+        (dolist (file monky-queue-staged-files)
+          (monky-with-section file 'diff
+            (monky-insert-diff file nil "qdiff")))))
+    (insert "\n")))
 
 (defun monky-wash-active-guards ()
   (if (looking-at "^no active guards")
@@ -2314,13 +2330,27 @@ With a non numeric prefix ARG, show all entries"
   (monky-hg-section 'active-guards "Active Guards:" #'monky-wash-active-guards
                     "qselect" "--config" "extensions.mq="))
 
+;;; Queue Staged Changes
+
+(defvar monky-queue-staged-all-files nil)
+(monky-def-permanent-buffer-local monky-queue-staged-files)
+(monky-def-permanent-buffer-local monky-queue-old-staged-files)
+
+(defun monky-queue-stage-file (file)
+  (add-to-list 'monky-queue-staged-files file))
+
+(defun monky-queue-unstage-file (file)
+  (setq monky-queue-staged-files (delete file monky-queue-staged-files)))
+
 (defun monky-refresh-queue-buffer ()
   (monky-create-buffer-sections
     (monky-with-section 'queue nil
       (monky-insert-untracked-files)
       (monky-insert-missing-files)
       (monky-insert-changes)
-      (monky-insert-queue-qdiff)
+      (monky-insert-staged-changes)
+      (monky-insert-queue-discarding)
+      (monky-insert-queue-staged-changes)
       (monky-insert-queue-queues)
       (monky-insert-active-guards)
       (monky-insert-queue-applied)
@@ -2438,6 +2468,20 @@ With a non numeric prefix ARG, show all entries"
      (erase-buffer)
      (insert-file-contents series))
    (monky-pop-to-log-edit 'qreorder)))
+
+(defun monky-queue-stage-all ()
+  "Add all items in Changes to the staging area."
+  (interactive)
+  (monky-with-refresh
+    (setq monky-queue-staged-all-files t)
+    (monky-refresh-buffer)))
+
+(defun monky-queue-unstage-all ()
+  "Remove all items from the staging area"
+  (interactive)
+  (monky-with-refresh
+    (setq monky-queue-staged-files '())
+    (monky-refresh-buffer)))
 
 (defun monky-qimport-item ()
   (interactive)
