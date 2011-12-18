@@ -2228,6 +2228,7 @@ With a non numeric prefix ARG, show all entries"
    (monky-with-wash-status status file
      (let ((monky-section-hidden-default monky-hide-diffs))
        (if (or monky-queue-staged-all-files
+               (member file monky-old-staged-files)
                (member file monky-queue-old-staged-files))
            (monky-queue-stage-file file)
          (monky-with-section file 'diff
@@ -2308,12 +2309,14 @@ With a non numeric prefix ARG, show all entries"
                       "--rev" "qtip")))
 
 (defun monky-insert-queue-staged-changes ()
-  (when (and monky-qtip-p-cached monky-queue-staged-files)
+  (when (and monky-qtip-p-cached
+             (or monky-queue-staged-files monky-staged-files))
     (monky-with-section 'queue-staged nil
       (insert (propertize "Staged changes (qdiff):"
                           'face 'monky-section-title) "\n")
       (let ((monky-section-hidden-default t))
-        (dolist (file monky-queue-staged-files)
+        (dolist (file (append monky-queue-staged-files
+                              monky-staged-files))
           (monky-with-section file 'diff
             (monky-insert-diff file nil "qdiff")))))
     (insert "\n")))
