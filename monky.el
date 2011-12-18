@@ -2316,8 +2316,8 @@ With a non numeric prefix ARG, show all entries"
       (insert (propertize "Staged changes (qdiff):"
                           'face 'monky-section-title) "\n")
       (let ((monky-section-hidden-default t))
-        (dolist (file (append monky-queue-staged-files
-                              monky-staged-files))
+        (dolist (file (delete-dups (copy-list (append monky-queue-staged-files
+                                                      monky-staged-files))))
           (monky-with-section file 'diff
             (monky-insert-diff file nil "qdiff")))))
     (insert "\n")))
