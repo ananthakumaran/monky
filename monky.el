@@ -1597,7 +1597,8 @@ before the last command."
          "--rev" revision args))
 
 (defun monky-qtip-p ()
-  (member "qtip" (monky-hg-log-tags "-1" "--config" "extensions.mq=")))
+  (let ((monky-cmd-process nil))        ; use single process
+    (member "qtip" (monky-hg-log-tags "-1" "--config" "extensions.mq="))))
 
 
 ;;; Washers
@@ -2300,7 +2301,7 @@ With a non numeric prefix ARG, show all entries"
 
 ;;; Qdiff
 (defun monky-insert-queue-discarding ()
-  (when monky-qtip-p-cached
+  (when (monky-qtip-p)
     (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
     (setq monky-queue-staged-files '())
     (let ((monky-hide-diffs t))
@@ -2310,7 +2311,7 @@ With a non numeric prefix ARG, show all entries"
                         "--rev" "qtip"))))
 
 (defun monky-insert-queue-staged-changes ()
-  (when (and monky-qtip-p-cached
+  (when (and (monky-qtip-p)
              (or monky-queue-staged-files monky-staged-files))
     (monky-with-section 'queue-staged nil
       (insert (propertize "Staged changes (qdiff):"
@@ -2351,7 +2352,6 @@ With a non numeric prefix ARG, show all entries"
   (setq monky-queue-staged-files (delete file monky-queue-staged-files)))
 
 (defun monky-refresh-queue-buffer ()
-  (setq monky-qtip-p-cached (monky-qtip-p)) ; not working inside macro?
   (monky-create-buffer-sections
     (monky-with-section 'queue nil
       (monky-insert-untracked-files)
