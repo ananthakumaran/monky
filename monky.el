@@ -1597,8 +1597,11 @@ before the last command."
          "--rev" revision args))
 
 (defun monky-qtip-p ()
-  (let ((monky-cmd-process nil))        ; use single process
-    (member "qtip" (monky-hg-log-tags "-1" "--config" "extensions.mq="))))
+  "Return non-nil if the current revision is qtip"
+  (let ((rev (replace-regexp-in-string "\\+$" ""
+                                       (monky-hg-string "identify" "--id"))))
+    (let ((monky-cmd-process nil))      ; use single process
+      (member "qtip" (monky-hg-log-tags rev "--config" "extensions.mq=")))))
 
 
 ;;; Washers
