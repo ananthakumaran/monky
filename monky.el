@@ -342,7 +342,7 @@ Many Monky faces inherit from this one by default."
                 (with-current-buffer buffer
                   (bury-buffer))))
       (setq default-directory dir)
-      (let ((monky-cmd-process (monky-start-process "monky-hg" buf "sh" "-c" "hg serve --cmdserver pipe 2> /dev/null")))
+      (let ((monky-cmd-process (monky-start-process "monky-hg" buf "sh" "-c" "hg --config extensions.mq= serve --cmdserver pipe 2> /dev/null")))
         (set-process-coding-system monky-cmd-process 'no-conversion 'no-conversion)
         (set-process-sentinel monky-cmd-process #'monky-cmdserver-sentinel)
         (monky-cmdserver-read) ; read hello
@@ -1574,6 +1574,40 @@ before the last command."
                     (equal section (caar item)))
                   (monky-hg-config))))
 
+(defvar monky-el-directory (file-name-directory load-file-name)
+  "The parent directory of monky.el")
+
+(defun monky-get-style-path (filename)
+  (concat (file-name-as-directory (concat monky-el-directory "style"))
+          filename))
+
+(defvar monky-hg-style-files
+  (monky-get-style-path "files"))
+
+(defvar monky-hg-style-files-status
+  (monky-get-style-path "files-status"))
+
+(defvar monky-hg-style-tags
+  (monky-get-style-path "tags"))
+
+(defun monky-hg-log-files (revision &rest args)
+  (apply #'monky-hg-lines "log"
+         "--style" monky-hg-style-files
+         "--rev" revision args))
+
+(defun monky-hg-log-tags (revision &rest args)
+  (apply #'monky-hg-lines "log"
+         "--style" monky-hg-style-tags
+         "--rev" revision args))
+
+(defun monky-qtip-p ()
+  "Return non-nil if the current revision is qtip"
+  (let ((rev (replace-regexp-in-string "\\+$" ""
+                                       (monky-hg-string "identify" "--id"))))
+    (let ((monky-cmd-process nil))      ; use single process
+      (member "qtip" (monky-hg-log-tags rev "--config" "extensions.mq=")))))
+
+
 ;;; Washers
 
 (defmacro monky-with-wash-status (status file &rest body)
@@ -1702,9 +1736,9 @@ before the last command."
 (defun monky-wash-diffs ()
   (monky-wash-sequence #'monky-wash-diff))
 
-(defun monky-insert-diff (file &optional status)
+(defun monky-insert-diff (file &optional status cmd)
   (let ((p (point)))
-    (monky-hg-insert (list "diff" file))
+    (monky-hg-insert (list (or cmd "diff") file))
     (if (not (eq (char-before) ?\n))
         (insert "\n"))
     (save-restriction
@@ -1768,7 +1802,8 @@ before the last command."
       (let ((monky-section-hidden-default t))
         (dolist (file monky-staged-files)
           (monky-with-section file 'diff
-            (monky-insert-diff file))))))
+            (monky-insert-diff file)))))
+    (insert "\n"))
   (setq monky-staged-all-files nil))
 
 
@@ -2222,12 +2257,12 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-patch-series-file ()
   (concat monky-patches-dir "series"))
 
-(defun monky-insert-patch (patch)
+(defun monky-insert-patch (patch inserter &rest args)
   (let ((p (point))
         (monky-hide-diffs nil))
     (save-restriction
       (narrow-to-region p p)
-      (insert-file-contents (concat monky-patches-dir patch))
+      (apply inserter args)
       (goto-char (point-max))
       (if (not (eq (char-before) ?\n))
           (insert "\n"))
@@ -2255,6 +2290,21 @@ With a non numeric prefix ARG, show all entries"
     (insert "\n")))
 
 (defun monky-wash-queue-patch ()
+  (monky-wash-queue-insert-patch #'insert-file-contents))
+
+(defun monky-wash-queue-discarding ()
+  (monky-wash-sequence
+   (monky-with-wash-status status file
+     (let ((monky-section-hidden-default monky-hide-diffs))
+       (if (or monky-queue-staged-all-files
+               (member file monky-old-staged-files)
+               (member file monky-queue-old-staged-files))
+           (monky-queue-stage-file file)
+         (monky-with-section file 'diff
+           (monky-insert-diff file status "qdiff"))))))
+  (setq monky-queue-staged-all-files nil))
+
+(defun monky-wash-queue-insert-patch (inserter)
   (if (looking-at "^\\([^\n]+\\)$")
       (let ((patch (match-string 1)))
         (monky-delete-line)
@@ -2263,7 +2313,8 @@ With a non numeric prefix ARG, show all entries"
             (monky-set-section-info patch)
             (insert "\t" patch)
             (monky-insert-guards patch)
-            (monky-insert-patch patch)
+            (funcall #'monky-insert-patch
+                     patch inserter (concat monky-patches-dir patch))
             (forward-line)))
         t)
     nil))
@@ -2316,6 +2367,30 @@ With a non numeric prefix ARG, show all entries"
   (monky-hg-section 'qseries "Series:" #'monky-wash-queue-patches
                     "qseries" "--config" "extensions.mq="))
 
+;;; Qdiff
+(defun monky-insert-queue-discarding ()
+  (when (monky-qtip-p)
+    (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
+    (setq monky-queue-staged-files '())
+    (let ((monky-hide-diffs t))
+      (monky-hg-section 'discarding "Discarding (qdiff):"
+                        #'monky-wash-queue-discarding
+                        "log" "--style" monky-hg-style-files-status
+                        "--rev" "qtip"))))
+
+(defun monky-insert-queue-staged-changes ()
+  (when (and (monky-qtip-p)
+             (or monky-queue-staged-files monky-staged-files))
+    (monky-with-section 'queue-staged nil
+      (insert (propertize "Staged changes (qdiff):"
+                          'face 'monky-section-title) "\n")
+      (let ((monky-section-hidden-default t))
+        (dolist (file (delete-dups (copy-list (append monky-queue-staged-files
+                                                      monky-staged-files))))
+          (monky-with-section file 'diff
+            (monky-insert-diff file nil "qdiff")))))
+    (insert "\n")))
+
 (defun monky-wash-active-guards ()
   (if (looking-at "^no active guards")
       (monky-delete-line t)
@@ -2332,9 +2407,27 @@ With a non numeric prefix ARG, show all entries"
   (monky-hg-section 'active-guards "Active Guards:" #'monky-wash-active-guards
                     "qselect" "--config" "extensions.mq="))
 
+;;; Queue Staged Changes
+
+(defvar monky-queue-staged-all-files nil)
+(monky-def-permanent-buffer-local monky-queue-staged-files)
+(monky-def-permanent-buffer-local monky-queue-old-staged-files)
+
+(defun monky-queue-stage-file (file)
+  (add-to-list 'monky-queue-staged-files file))
+
+(defun monky-queue-unstage-file (file)
+  (setq monky-queue-staged-files (delete file monky-queue-staged-files)))
+
 (defun monky-refresh-queue-buffer ()
   (monky-create-buffer-sections
     (monky-with-section 'queue nil
+      (monky-insert-untracked-files)
+      (monky-insert-missing-files)
+      (monky-insert-changes)
+      (monky-insert-staged-changes)
+      (monky-insert-queue-discarding)
+      (monky-insert-queue-staged-changes)
       (monky-insert-queue-queues)
       (monky-insert-active-guards)
       (monky-insert-queue-applied)
@@ -2381,8 +2474,9 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-qrefresh ()
   (interactive)
   (if (not current-prefix-arg)
-      (monky-run-hg "qrefresh"
-                    "--config" "extensions.mq=")
+      (apply #'monky-run-hg "qrefresh"
+             "--config" "extensions.mq="
+             (append monky-staged-files monky-queue-staged-files))
     ;; get last commit message
     (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
       (monky-hg-insert
@@ -2453,6 +2547,20 @@ With a non numeric prefix ARG, show all entries"
      (insert-file-contents series))
    (monky-pop-to-log-edit 'qreorder)))
 
+(defun monky-queue-stage-all ()
+  "Add all items in Changes to the staging area."
+  (interactive)
+  (monky-with-refresh
+    (setq monky-queue-staged-all-files t)
+    (monky-refresh-buffer)))
+
+(defun monky-queue-unstage-all ()
+  "Remove all items from the staging area"
+  (interactive)
+  (monky-with-refresh
+    (setq monky-queue-staged-files '())
+    (monky-refresh-buffer)))
+
 (defun monky-qimport-item ()
   (interactive)
   (monky-section-action (item info "qimport")
@@ -2471,7 +2579,21 @@ With a non numeric prefix ARG, show all entries"
      (monky-qpop info)
      (monky-qpop))
     ((applied)
-     (monky-qpop-all))))
+     (monky-qpop-all))
+    ((staged diff)
+     (monky-unstage-file (monky-section-title item))
+     (monky-queue-unstage-file (monky-section-title item))
+     (monky-refresh-buffer))
+    ((staged)
+     (monky-unstage-all)
+     (monky-queue-unstage-all))
+    ((queue-staged diff)
+     (monky-unstage-file (monky-section-title item))
+     (monky-queue-unstage-file (monky-section-title item))
+     (monky-refresh-buffer))
+    ((queue-staged)
+     (monky-unstage-all)
+     (monky-queue-unstage-all))))
 
 (defun monky-qpush-item ()
   (interactive)
@@ -2479,7 +2601,27 @@ With a non numeric prefix ARG, show all entries"
     ((unapplied patch)
      (monky-qpush info))
     ((unapplied)
-     (monky-qpush-all))))
+     (monky-qpush-all))
+    ((untracked file)
+     (monky-run-hg "add" info))
+    ((untracked)
+     (monky-run-hg "add"))
+    ((missing file)
+     (monky-run-hg "remove" "--after" info))
+    ((changes diff)
+     (monky-stage-file (monky-section-title item))
+     (monky-queue-stage-file (monky-section-title item))
+     (monky-refresh-buffer))
+    ((changes)
+     (monky-stage-all)
+     (monky-queue-stage-all))
+    ((discarding diff)
+     (monky-stage-file (monky-section-title item))
+     (monky-queue-stage-file (monky-section-title item))
+     (monky-refresh-buffer))
+    ((discarding)
+     (monky-stage-all)
+     (monky-queue-stage-all))))
 
 (defun monky-qremove-item ()
   (interactive)
@@ -2562,11 +2704,11 @@ With a non numeric prefix ARG, show all entries"
                                      "--logfile" "-")))
       ('qrefresh
        (with-current-buffer monky-log-edit-client-buffer
-         (monky-run-async-with-input commit-buf
-                                     monky-hg-executable
-                                     "qrefresh"
-                                     "--config" "extensions.mq="
-                                     "--logfile" "-")))
+         (apply #'monky-run-async-with-input commit-buf
+                monky-hg-executable "qrefresh"
+                "--config" "extensions.mq="
+                "--logfile" "-"
+                (append monky-staged-files monky-queue-staged-files))))
       ('qreorder
        (let* ((queue-buffer (monky-find-buffer 'queue))
 	      (series (with-current-buffer queue-buffer
