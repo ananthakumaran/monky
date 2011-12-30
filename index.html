@@ -52,6 +52,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#dir">(dir)</a>
 <li><a accesskey="7" href="#Merged-Files">Merged Files</a>
 <li><a accesskey="8" href="#Pushing-and-Pulling">Pushing and Pulling</a>
 <li><a accesskey="9" href="#Log">Log</a>
+<li><a href="#Blame">Blame</a>
 <li><a href="#Branch">Branch</a>
 <li><a href="#Queue">Queue</a>
 <li><a href="#Using-Hg-Directly">Using Hg Directly</a>
@@ -198,14 +199,50 @@ argument.
 
 <div class="node">
 <p><hr>
-<a name="Branch"></a>
-Next:&nbsp;<a rel="next" accesskey="n" href="#Queue">Queue</a>,
+<a name="Log"></a>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Blame">Blame</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Pushing-and-Pulling">Pushing and Pulling</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">9 Log</h2>
+
+<p>Typing <kbd>l</kbd> will bring up the log buffer. This will list the commit
+logs of the repo. You can use <kbd>n</kbd> and <kbd>p</kbd> to move to the
+previous and next commit. Type <kbd>RET</kbd> to see the commit
+information, <kbd>C</kbd> to checkout the commit.
+
+   <p>Monky will show only <code>monky-log-cutoff-length</code> entries. Typing
+<kbd>e</kbd> will show twice as many entries. <kbd>C-u e</kbd> will show all
+entries, and given a numeric prefix argument, <kbd>e</kbd> will add this
+number of entries.
+
+<div class="node">
+<p><hr>
+<a name="Blame"></a>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Branch">Branch</a>,
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Log">Log</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">9 Branch</h2>
+<h2 class="chapter">10 Blame</h2>
+
+<p>Run <kbd>M-x monky-blame-current-file</kbd> to see the annotation of the
+current file. Type <kbd>RET</kbd> to see the commit which
+introduced/changed the current line.
+
+<div class="node">
+<p><hr>
+<a name="Branch"></a>
+Next:&nbsp;<a rel="next" accesskey="n" href="#Queue">Queue</a>,
+Previous:&nbsp;<a rel="previous" accesskey="p" href="#Blame">Blame</a>,
+Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
+
+</div>
+
+<h2 class="chapter">11 Branch</h2>
 
 <p>Typing <kbd>b</kbd> will bring up the branch buffer. This will list all the
 branches. You can use <kbd>C</kbd> to checkout a branch.
@@ -219,7 +256,7 @@ Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">10 Queue</h2>
+<h2 class="chapter">12 Queue</h2>
 
 <p>Use <kbd>M-x monky-queue</kbd> or <kbd>Q</kbd> from the status buffer to view
 the queue buffer. The queue buffer will list the <em>Applied
@@ -264,34 +301,13 @@ or change sets in a selected region (when selected) will be imported.
 
 <div class="node">
 <p><hr>
-<a name="Log"></a>
-Next:&nbsp;<a rel="next" accesskey="n" href="#Branch">Branch</a>,
-Previous:&nbsp;<a rel="previous" accesskey="p" href="#Pushing-and-Pulling">Pushing and Pulling</a>,
-Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
-
-</div>
-
-<h2 class="chapter">11 Log</h2>
-
-<p>Typing <kbd>l</kbd> will bring up the log buffer. This will list the commit
-logs of the repo. You can use <kbd>n</kbd> and <kbd>p</kbd> to move to the
-previous and next commit. Type <kbd>RET</kbd> to see the commit
-information, <kbd>C</kbd> to checkout the commit.
-
-   <p>Monky will show only <code>monky-log-cutoff-length</code> entries. Typing
-<kbd>e</kbd> will show twice as many entries. <kbd>C-u e</kbd> will show all
-entries, and given a numeric prefix argument, <kbd>e</kbd> will add this
-number of entries.
-
-<div class="node">
-<p><hr>
 <a name="Using-Hg-Directly"></a>
 Previous:&nbsp;<a rel="previous" accesskey="p" href="#Queue">Queue</a>,
 Up:&nbsp;<a rel="up" accesskey="u" href="#Top">Top</a>
 
 </div>
 
-<h2 class="chapter">12 Using Hg Directly</h2>
+<h2 class="chapter">13 Using Hg Directly</h2>
 
 <p>To run a Hg command directly type <kbd>:</kbd> and enter the command in the
 minibuffer. This will refresh the status buffer after the execution of
