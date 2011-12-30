@@ -556,6 +556,10 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "i") 'monky-qimport-item)
     map))
 
+(defvar monky-blame-mode-map
+  (let ((map (make-keymap)))
+    map))
+
 (defvar monky-branches-mode-map
   (let ((map (make-keymap)))
     (define-key map (kbd "C") 'monky-checkout-item)
@@ -799,7 +803,7 @@ CMD is an external command that will be run with ARGS as arguments"
         (monky-goto-next-section)))
      (next
       (goto-char (monky-section-beginning next))
-      (if (eq monky-submode 'log)
+      (if (memq monky-submode '(log blame))
           (monky-show-commit next))
       (if (not (monky-section-hidden next))
           (let ((offset (- (line-number-at-pos
@@ -833,7 +837,7 @@ CMD is an external command that will be run with ARGS as arguments"
            (let ((prev (monky-prev-section (monky-current-section))))
              (if prev
                  (progn
-                   (if (eq monky-submode 'log)
+                   (if (memq monky-submode '(log blame))
                        (monky-show-commit prev))
                    (goto-char (monky-section-beginning prev)))
                (message "No previous section"))))
@@ -841,7 +845,7 @@ CMD is an external command that will be run with ARGS as arguments"
            (let ((prev (monky-find-section-before (point)
                                                   (monky-section-children
                                                    section))))
-             (if (eq monky-submode 'log)
+             (if (memq monky-submode '(log blame))
                  (monky-show-commit (or prev section)))
              (goto-char (monky-section-beginning (or prev section))))))))
 
@@ -2008,6 +2012,67 @@ With a non numeric prefix ARG, show all entries"
               (not (equal (get-text-property pos 'face) 'monky-log-sha1)))
     (setq pos (previous-single-property-change pos 'face)))
   pos)
+
+;;; Blame mode
+(define-minor-mode monky-blame-mode
+  "Minor mode for hg blame.
+
+\\{monky-blame-mode-map}"
+  :group monky
+  :init-value ()
+  :lighter ()
+  :keymap monky-blame-mode-map)
+
+(defvar monky-blame-buffer-name "*monky-blame*")
+
+(defun monky-present-blame-line (author changeset text)
+  (concat author
+	  " "
+	  (propertize changeset 'face 'monky-log-sha1)
+	  ": "
+	  text))
+
+(defvar monky-blame-re
+  (concat
+   "\\(.*\\) "               ; author
+   "\\([a-f0-9]\\{12\\}\\):" ; changeset
+   "\\(.*\\)$"               ; text
+   ))
+
+(defun monky-wash-blame-line ()
+  (if (looking-at monky-blame-re)
+      (let ((author (match-string 1))
+	    (changeset (match-string 2))
+	    (text (match-string 3)))
+	(monky-delete-line)
+	(monky-with-section changeset 'commit
+	  (insert (monky-present-blame-line author changeset text))
+	  (monky-set-section-info changeset)
+	  (forward-line))
+	t)))
+
+(defun monky-wash-blame ()
+  (monky-wash-sequence #'monky-wash-blame-line))
+
+(defun monky-refresh-blame-buffer (file-name)
+  (monky-create-buffer-sections
+    (monky-with-section file-name 'blame
+      (monky-hg-section nil nil
+			#'monky-wash-blame
+			"blame"
+			"--user"
+			"--changeset"
+			file-name))))
+
+(defun monky-blame-current-file ()
+  (interactive)
+  (monky-with-process
+    (let ((file-name (buffer-file-name))
+	  (topdir (monky-get-root-dir)))
+      (pop-to-buffer monky-blame-buffer-name)
+      (monky-mode-init topdir 'blame #'monky-refresh-blame-buffer file-name)
+      (monky-blame-mode t))))
+
 
 
 ;;; Commit mode
