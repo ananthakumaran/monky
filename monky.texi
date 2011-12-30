@@ -31,6 +31,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Merged Files::
 * Pushing and Pulling::
 * Log::
+* Blame::
 * Branch::
 * Queue::
 * Using Hg Directly::
@@ -111,6 +112,26 @@ from remote and @kbd{F} to fetch changes from the remote. You can
 specify the source/destination to the previous commands  with a prefix
 argument.
 
+@node Log
+@chapter Log
+
+Typing @kbd{l} will bring up the log buffer. This will list the commit
+logs of the repo. You can use @kbd{n} and @kbd{p} to move to the
+previous and next commit. Type @kbd{RET} to see the commit
+information, @kbd{C} to checkout the commit.
+
+Monky will show only @code{monky-log-cutoff-length} entries. Typing
+@kbd{e} will show twice as many entries. @kbd{C-u e} will show all
+entries, and given a numeric prefix argument, @kbd{e} will add this
+number of entries.
+
+@node Blame
+@chapter Blame
+
+Run @kbd{M-x monky-blame-current-file} to see the annotation of the
+current file. Type @kbd{RET} to see the commit which
+introduced/changed the current line.
+
 @node Branch
 @chapter Branch
 
@@ -161,20 +182,6 @@ or change sets in a selected region (when selected) will be imported.
 @item o
 @tab pop all patches and edit .hg/patches/series file to reorder them
 @end multitable
-
-
-@node Log
-@chapter Log
-
-Typing @kbd{l} will bring up the log buffer. This will list the commit
-logs of the repo. You can use @kbd{n} and @kbd{p} to move to the
-previous and next commit. Type @kbd{RET} to see the commit
-information, @kbd{C} to checkout the commit.
-
-Monky will show only @code{monky-log-cutoff-length} entries. Typing
-@kbd{e} will show twice as many entries. @kbd{C-u e} will show all
-entries, and given a numeric prefix argument, @kbd{e} will add this
-number of entries.
 
 @node Using Hg Directly
 @chapter Using Hg Directly

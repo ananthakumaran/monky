@@ -27,6 +27,7 @@ Monky is an emacs extension, provides an interactive interface for Hg
 * Merged Files::
 * Pushing and Pulling::
 * Log::
+* Blame::
 * Branch::
 * Queue::
 * Using Hg Directly::
@@ -129,10 +130,35 @@ and `F' to fetch changes from the remote. You can specify the
 source/destination to the previous commands  with a prefix argument.
 
 
-File: monky.info,  Node: Branch,  Next: Queue,  Prev: Log,  Up: Top
+File: monky.info,  Node: Log,  Next: Blame,  Prev: Pushing and Pulling,  Up: Top
 
-9 Branch
+9 Log
+*****
+
+Typing `l' will bring up the log buffer. This will list the commit logs
+of the repo. You can use `n' and `p' to move to the previous and next
+commit. Type `RET' to see the commit information, `C' to checkout the
+commit.
+
+   Monky will show only `monky-log-cutoff-length' entries. Typing `e'
+will show twice as many entries. `C-u e' will show all entries, and
+given a numeric prefix argument, `e' will add this number of entries.
+
+
+File: monky.info,  Node: Blame,  Next: Branch,  Prev: Log,  Up: Top
+
+10 Blame
 ********
+
+Run `M-x monky-blame-current-file' to see the annotation of the current
+file. Type `RET' to see the commit which introduced/changed the current
+line.
+
+
+File: monky.info,  Node: Branch,  Next: Queue,  Prev: Blame,  Up: Top
+
+11 Branch
+*********
 
 Typing `b' will bring up the branch buffer. This will list all the
 branches. You can use `C' to checkout a branch.
@@ -140,7 +166,7 @@ branches. You can use `C' to checkout a branch.
 
 File: monky.info,  Node: Queue,  Next: Using Hg Directly,  Prev: Branch,  Up: Top
 
-10 Queue
+12 Queue
 ********
 
 Use `M-x monky-queue' or `Q' from the status buffer to view the queue
@@ -162,30 +188,20 @@ k           remove the selected patch
 N           create a new patch on top of current patch
 C-u N       same as N except this will also read the commit message for
             the patch
+i           import(qimport) patches from change sets. a change set at
+            the point or change sets in a selected region (when
+            selected) will be imported.
 d           fold the selected patch into the current patch
 f           apply(qfinish) the selected patch into repo history
 F           apply(qfinish) all applied patches into repo history
 G           reset the guards of the selected patch with new guards
-
-
-File: monky.info,  Node: Log,  Next: Branch,  Prev: Pushing and Pulling,  Up: Top
-
-11 Log
-******
-
-Typing `l' will bring up the log buffer. This will list the commit logs
-of the repo. You can use `n' and `p' to move to the previous and next
-commit. Type `RET' to see the commit information, `C' to checkout the
-commit.
-
-   Monky will show only `monky-log-cutoff-length' entries. Typing `e'
-will show twice as many entries. `C-u e' will show all entries, and
-given a numeric prefix argument, `e' will add this number of entries.
+o           pop all patches and edit .hg/patches/series file to reorder
+            them
 
 
 File: monky.info,  Node: Using Hg Directly,  Prev: Queue,  Up: Top
 
-12 Using Hg Directly
+13 Using Hg Directly
 ********************
 
 To run a Hg command directly type `:' and enter the command in the
@@ -196,17 +212,18 @@ command.  The output of the command can be viewed by typing `$'.
 
 Tag Table:
 Node: Top421
-Node: Introduction802
-Node: Sections1043
-Node: Status1376
-Node: Untracked files1854
-Node: Missing Files2060
-Node: Staging and Committing2329
-Node: Merged Files3164
-Node: Pushing and Pulling3642
-Node: Branch3979
-Node: Queue4185
-Node: Log5435
-Node: Using Hg Directly5965
+Node: Introduction812
+Node: Sections1053
+Node: Status1386
+Node: Untracked files1864
+Node: Missing Files2070
+Node: Staging and Committing2339
+Node: Merged Files3174
+Node: Pushing and Pulling3652
+Node: Log3989
+Node: Blame4516
+Node: Branch4757
+Node: Queue4967
+Node: Using Hg Directly6480
 
 End Tag Table
