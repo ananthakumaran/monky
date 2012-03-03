@@ -202,6 +202,11 @@ Many Monky faces inherit from this one by default."
   "Face for tag labels shown in log buffer."
   :group 'monky-faces)
 
+(defface monky-queue-patch
+  '((t :weight bold :inherit (monky-header highlight)))
+  "Face for patch name"
+  :group 'monky)
+
 (defface monky-queue-active
   '((((class color) (background light))
      :box t
@@ -2290,12 +2295,13 @@ With a non numeric prefix ARG, show all entries"
                                           "--config" "extensions.mq=")
                          ":"))))))
     (dolist (guard guards)
-      (insert " " (propertize guard
-                              'face
-                              (if (monky-string-starts-with-p guard "+")
-                                  'monky-queue-positive-guard
-                                'monky-queue-negative-guard))))
-    (insert "\n")))
+      (insert (propertize " " 'face 'monky-queue-patch)
+              (propertize guard
+                          'face
+                          (if (monky-string-starts-with-p guard "+")
+                              'monky-queue-positive-guard
+                            'monky-queue-negative-guard))))
+    (insert (propertize "\n" 'face 'monky-queue-patch))))
 
 (defun monky-wash-queue-patch ()
   (monky-wash-queue-insert-patch #'insert-file-contents))
@@ -2319,7 +2325,8 @@ With a non numeric prefix ARG, show all entries"
         (let ((monky-section-hidden-default t))
           (monky-with-section patch 'patch
             (monky-set-section-info patch)
-            (insert "\t" patch)
+            (insert
+             (propertize (format "\t%s" patch) 'face 'monky-queue-patch))
             (monky-insert-guards patch)
             (funcall #'monky-insert-patch
                      patch inserter (concat monky-patches-dir patch))
