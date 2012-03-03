@@ -134,6 +134,11 @@ Many Monky faces inherit from this one by default."
   "Face for the current branch."
   :group 'monky)
 
+(defface monky-diff-title
+  '((t :inherit (monky-header highlight)))
+  "Face for diff title lines."
+  :group 'monky-faces)
+
 (defface monky-diff-hunk-header
   '((t :slant italic :inherit monky-header))
   "Face for diff hunk header lines."
@@ -1748,7 +1753,10 @@ before the last command."
       (goto-char (point-max)))))
 
 (defun monky-insert-diff-title (status file)
-  (insert (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)))
+  (insert
+   (propertize
+    (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)
+    'face 'monky-diff-title)))
 
 ;;; Untracked files
 
