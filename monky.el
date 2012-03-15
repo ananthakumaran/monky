@@ -134,6 +134,11 @@ Many Monky faces inherit from this one by default."
   "Face for the current branch."
   :group 'monky)
 
+(defface monky-diff-title
+  '((t :inherit (monky-header highlight)))
+  "Face for diff title lines."
+  :group 'monky-faces)
+
 (defface monky-diff-hunk-header
   '((t :slant italic :inherit monky-header))
   "Face for diff hunk header lines."
@@ -196,6 +201,11 @@ Many Monky faces inherit from this one by default."
      :foreground "goldenrod4"))
   "Face for tag labels shown in log buffer."
   :group 'monky-faces)
+
+(defface monky-queue-patch
+  '((t :weight bold :inherit (monky-header highlight)))
+  "Face for patch name"
+  :group 'monky)
 
 (defface monky-queue-active
   '((((class color) (background light))
@@ -1748,7 +1758,10 @@ before the last command."
       (goto-char (point-max)))))
 
 (defun monky-insert-diff-title (status file)
-  (insert (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)))
+  (insert
+   (propertize
+    (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)
+    'face 'monky-diff-title)))
 
 ;;; Untracked files
 
@@ -2282,12 +2295,13 @@ With a non numeric prefix ARG, show all entries"
                                           "--config" "extensions.mq=")
                          ":"))))))
     (dolist (guard guards)
-      (insert " " (propertize guard
-                              'face
-                              (if (monky-string-starts-with-p guard "+")
-                                  'monky-queue-positive-guard
-                                'monky-queue-negative-guard))))
-    (insert "\n")))
+      (insert (propertize " " 'face 'monky-queue-patch)
+              (propertize guard
+                          'face
+                          (if (monky-string-starts-with-p guard "+")
+                              'monky-queue-positive-guard
+                            'monky-queue-negative-guard))))
+    (insert (propertize "\n" 'face 'monky-queue-patch))))
 
 (defun monky-wash-queue-patch ()
   (monky-wash-queue-insert-patch #'insert-file-contents))
@@ -2311,7 +2325,8 @@ With a non numeric prefix ARG, show all entries"
         (let ((monky-section-hidden-default t))
           (monky-with-section patch 'patch
             (monky-set-section-info patch)
-            (insert "\t" patch)
+            (insert
+             (propertize (format "\t%s" patch) 'face 'monky-queue-patch))
             (monky-insert-guards patch)
             (funcall #'monky-insert-patch
                      patch inserter (concat monky-patches-dir patch))
