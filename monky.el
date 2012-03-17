@@ -291,6 +291,8 @@ Many Monky faces inherit from this one by default."
 (defvar monky-cmd-process-input-buffer nil)
 (defvar monky-cmd-process-input-point nil)
 (defvar monky-cmd-error-message nil)
+(defvar monky-cmd-hello-message nil
+  "Variable to store parsed hello message.")
 
 (monky-def-permanent-buffer-local monky-root-dir)
 
@@ -351,11 +353,34 @@ Many Monky faces inherit from this one by default."
       (let ((monky-cmd-process (monky-start-process "monky-hg" buf "sh" "-c" "hg --config extensions.mq= serve --cmdserver pipe 2> /dev/null")))
         (set-process-coding-system monky-cmd-process 'no-conversion 'no-conversion)
         (set-process-sentinel monky-cmd-process #'monky-cmdserver-sentinel)
-        (monky-cmdserver-read) ; read hello
+        (setq monky-cmd-hello-message
+              (monky-cmdserver-parse-hello (monky-cmdserver-read)))
         monky-cmd-process))))
 
 (defun monky-cmdserver-stop (proc)
   (delete-process proc))
+
+(defun monky-cmdserver-parse-hello (hello-message)
+  "Parse hello message to get encoding information."
+  (let ((channel (car hello-message))
+        (text (cdr hello-message)))
+    (if (eq channel ?o)
+        (progn
+          (mapcar
+           (lambda (s)
+             (string-match "^\\([a-z0-9]+\\) *: *\\(.*\\)$" s)
+             (let ((field-name (match-string 1 s))
+                   (field-data (match-string 2 s)))
+               (cons (intern field-name) field-data)))
+           (split-string (monky-cmdserver-unpack-string text) "\n")))
+      (error "unknown channel %c for hello message" channel))))
+
+(defun monky-cmdserver-get-encoding (&optional default)
+  "Get encoding stored in `monky-cmd-hello-message'."
+  (let ((e (assoc 'encoding monky-cmd-hello-message)))
+    (if e
+        (intern (cdr e))
+      default)))
 
 (defun monky-cmdserver-runcommand (&rest cmd-and-args)
   (setq monky-cmd-error-message nil)
@@ -398,7 +423,8 @@ Many Monky faces inherit from this one by default."
                  (t
                   (setq monky-cmd-error-message
                         (format "Unsupported channel: %c" channel)))))))))
-    (decode-coding-region start (point) 'utf-8)
+    (decode-coding-region start (point)
+                          (monky-cmdserver-get-encoding 'utf-8))
     result))
 
 (defun monky-cmdserver-process-file (program infile buffer display &rest args)
