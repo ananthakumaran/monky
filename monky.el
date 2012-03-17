@@ -197,6 +197,30 @@ Many Monky faces inherit from this one by default."
   "Face for tag labels shown in log buffer."
   :group 'monky-faces)
 
+(defface monky-log-head-label-bookmarks
+  '((((class color) (background light))
+     :box t
+     :background "IndianRed1"
+     :foreground "IndianRed4")
+    (((class color) (background dark))
+     :box t
+     :background "IndianRed1"
+     :foreground "IndianRed4"))
+  "Face for bookmark labels shown in log buffer."
+  :group 'monky-faces)
+
+(defface monky-log-head-label-phase
+  '((((class color) (background light))
+     :box t
+     :background "light green"
+     :foreground "dark olive green")
+    (((class color) (background dark))
+     :box t
+     :background "light green"
+     :foreground "dark olive green"))
+  "Face for phase label shown in log buffer."
+  :group 'monky-faces)
+
 (defface monky-queue-active
   '((((class color) (background light))
      :box t
@@ -1938,13 +1962,16 @@ PROPERTIES is the arguments for the function `propertize'."
                             (list (apply #'propertize l properties) " ")))
                         label-list))))
 
-(defun monky-present-log-line (graph id branches tags message)
+(defun monky-present-log-line (graph id branches tags bookmarks phase message)
   (concat
    (propertize (substring id 0 8) 'face 'monky-log-sha1)
    " "
    graph
    (monky-propertize-labels branches 'face 'monky-log-head-label-local)
    (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
+   (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
+   (unless (or (string= phase "") (string= phase "public"))
+     (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))
    (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
@@ -1961,7 +1988,9 @@ PROPERTIES is the arguments for the function `propertize'."
    "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
    "<branches>\\(.?*\\)</branches>"     ; 3. branches
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
-   "\\(.*\\)$"                          ; 5. msg
+   "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
+   "<phase>\\(.?*\\)</phase>"           ; 6. phase
+   "\\(.*\\)$"                          ; 7. msg
    ))
 
 (defun monky-decode-xml-entities (str)
@@ -1988,13 +2017,17 @@ Example:
             (id (match-string 2))
             (branches (match-string 3))
             (tags (match-string 4))
-            (msg (match-string 5)))
+            (bookmarks (match-string 5))
+            (phase (match-string 6))
+            (msg (match-string 7)))
         (monky-delete-line)
         (monky-with-section id 'commit
           (insert (monky-present-log-line
                    graph id
                    (monky-xml-items-to-list branches "branch")
                    (monky-xml-items-to-list tags "tag")
+                   (monky-xml-items-to-list bookmarks "bookmark")
+                   (monky-decode-xml-entities phase)
                    (monky-decode-xml-entities msg)))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
