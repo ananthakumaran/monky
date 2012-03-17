@@ -254,6 +254,15 @@ Many Monky faces inherit from this one by default."
      ,@body))
 
 (defmacro monky-with-refresh (&rest body)
+  "Refresh monky buffers after evaluating BODY.
+
+It is safe to call the functions which uses this macro inside of
+this macro.  As it is time consuming to refresh monky buffers,
+this macro enforces refresh to occur exactly once by pending
+refreshes inside of this macro.  Nested calls of this
+macro (possibly via functions) does not refresh buffers multiple
+times.  Instead, only the outside-most call of this macro
+refreshes buffers."
   (declare (indent 0)
            (debug (body)))
   `(monky-refresh-wrapper (lambda () ,@body)))
@@ -311,6 +320,7 @@ Many Monky faces inherit from this one by default."
       (vconcat str))))
 
 (defun monky-cmdserver-read ()
+  "Read one channel and return cons (CHANNEL . RAW-DATA)."
   (let* ((data (bindat-unpack '((channel byte) (len u32))
                               (monky-cmdserver-read-data 5)))
          (channel (bindat-get-field data 'channel))
@@ -1143,6 +1153,10 @@ and throws an error otherwise."
                            ,type))))))))
 
 (defmacro monky-section-action (head &rest clauses)
+  "Refresh monky buffers after executing action defined in CLAUSES.
+
+See `monky-section-case' for the definition of HEAD and CLAUSES and
+`monky-with-refresh' for how the buffers are refreshed."
   (declare (indent 1)
            (debug (sexp &rest (sexp body))))
   `(monky-with-refresh
@@ -1368,6 +1382,7 @@ buffer instead."
 (defvar monky-refresh-pending nil)
 
 (defun monky-refresh-wrapper (func)
+  "A helper function for `monky-with-refresh'."
   (monky-with-process
     (if monky-refresh-pending
         (funcall func)
