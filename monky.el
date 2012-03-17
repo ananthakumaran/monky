@@ -317,6 +317,12 @@ Many Monky faces inherit from this one by default."
          (len (bindat-get-field data 'len)))
     (cons channel (monky-cmdserver-read-data len))))
 
+(defun monky-cmdserver-unpack-int (data)
+  (bindat-get-field (bindat-unpack '((field u32)) data) 'field))
+
+(defun monky-cmdserver-unpack-string (data)
+  (bindat-get-field (bindat-unpack `((field str ,(length data))) data) 'field))
+
 (defun monky-cmdserver-write (data)
   (process-send-string monky-cmd-process
                        (concat (bindat-pack '((len u32))
@@ -368,14 +374,13 @@ Many Monky faces inherit from this one by default."
                      (text (cdr result)))
                 (cond
                  ((eq channel ?o)
-                  (insert (bindat-get-field
-                           (bindat-unpack `((text str ,(length text))) text)
-                           'text)))
+                  (insert (monky-cmdserver-unpack-string text)))
                  ((eq channel ?r)
                   (throw 'finished
-                         (bindat-get-field (bindat-unpack '((code u32)) text) 'code)))
+                         (monky-cmdserver-unpack-int text)))
                  ((eq channel ?e)
-                  (setq monky-cmd-error-message (concat monky-cmd-error-message text)))
+                  (setq monky-cmd-error-message
+                        (concat monky-cmd-error-message text)))
                  ((memq channel '(?I ?L))
                   (with-current-buffer monky-cmd-process-input-buffer
                     (let* ((max (if (eq channel ?I)
@@ -383,15 +388,16 @@ Many Monky faces inherit from this one by default."
                                   (save-excursion
                                     (goto-point monky-cmd-process-input-point)
                                     (line-beginning-position 2))))
-                           (maxreq (bindat-get-field (bindat-unpack '((len u32)) text) 'len))
-                           (len (min (- max monky-cmd-process-input-point) maxreq))
+                           (maxreq (monky-cmdserver-unpack-int text))
+                           (len (min (- max monky-cmd-process-input-point)
+                                     maxreq))
                            (end (+ monky-cmd-process-input-point len)))
-
                       (monky-cmdserver-write
                        (buffer-substring monky-cmd-process-input-point end))
                       (setq monky-cmd-process-input-point end))))
                  (t
-                  (setq monky-cmd-error-message (format "Unsupported channel: %c" channel)))))))))
+                  (setq monky-cmd-error-message
+                        (format "Unsupported channel: %c" channel)))))))))
     (decode-coding-region start (point) 'utf-8)
     result))
 
