@@ -358,36 +358,42 @@ Many Monky faces inherit from this one by default."
     (erase-buffer))
   (process-send-string monky-cmd-process "runcommand\n")
   (monky-cmdserver-write (mapconcat #'identity cmd-and-args "\0"))
-  (let ((inhibit-read-only t))
-    (catch 'finished
-      (while t
-        (let* ((result (monky-cmdserver-read))
-               (channel (car result))
-               (text (cdr result)))
-          (cond
-           ((eq channel ?o)
-            (insert (concat text)))
-           ((eq channel ?r)
-            (throw 'finished
-                   (bindat-get-field (bindat-unpack '((code u32)) text) 'code)))
-           ((eq channel ?e)
-            (setq monky-cmd-error-message (concat monky-cmd-error-message text)))
-           ((memq channel '(?I ?L))
-            (with-current-buffer monky-cmd-process-input-buffer
-              (let* ((max (if (eq channel ?I)
-                              (point-max)
-                            (save-excursion
-                              (goto-point monky-cmd-process-input-point)
-                              (line-beginning-position 2))))
-                     (maxreq (bindat-get-field (bindat-unpack '((len u32)) text) 'len))
-                     (len (min (- max monky-cmd-process-input-point) maxreq))
-                     (end (+ monky-cmd-process-input-point len)))
+  (let* ((inhibit-read-only t)
+         (start (point))
+         (result
+          (catch 'finished
+            (while t
+              (let* ((result (monky-cmdserver-read))
+                     (channel (car result))
+                     (text (cdr result)))
+                (cond
+                 ((eq channel ?o)
+                  (insert (bindat-get-field
+                           (bindat-unpack `((text str ,(length text))) text)
+                           'text)))
+                 ((eq channel ?r)
+                  (throw 'finished
+                         (bindat-get-field (bindat-unpack '((code u32)) text) 'code)))
+                 ((eq channel ?e)
+                  (setq monky-cmd-error-message (concat monky-cmd-error-message text)))
+                 ((memq channel '(?I ?L))
+                  (with-current-buffer monky-cmd-process-input-buffer
+                    (let* ((max (if (eq channel ?I)
+                                    (point-max)
+                                  (save-excursion
+                                    (goto-point monky-cmd-process-input-point)
+                                    (line-beginning-position 2))))
+                           (maxreq (bindat-get-field (bindat-unpack '((len u32)) text) 'len))
+                           (len (min (- max monky-cmd-process-input-point) maxreq))
+                           (end (+ monky-cmd-process-input-point len)))
 
-                (monky-cmdserver-write
-                 (buffer-substring monky-cmd-process-input-point end))
-                (setq monky-cmd-process-input-point end))))
-           (t
-            (setq monky-cmd-error-message (format "Unsupported channel: %c" channel)))))))))
+                      (monky-cmdserver-write
+                       (buffer-substring monky-cmd-process-input-point end))
+                      (setq monky-cmd-process-input-point end))))
+                 (t
+                  (setq monky-cmd-error-message (format "Unsupported channel: %c" channel)))))))))
+    (decode-coding-region start (point) 'utf-8)
+    result))
 
 (defun monky-cmdserver-process-file (program infile buffer display &rest args)
   "Same as `process-file' but uses the currently active hg command-server."
