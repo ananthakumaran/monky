@@ -1939,12 +1939,13 @@ PROPERTIES is the arguments for the function `propertize'."
                         label-list))))
 
 (defun monky-present-log-line (graph id branches tags message)
-  (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
-          " "
-          graph
-          (monky-propertize-labels branches 'face 'monky-log-head-label-local)
-          (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
-          (propertize message 'face 'monky-log-message)))
+  (concat
+   (propertize (substring id 0 8) 'face 'monky-log-sha1)
+   " "
+   graph
+   (monky-propertize-labels branches 'face 'monky-log-head-label-local)
+   (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
+   (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
   (interactive)
