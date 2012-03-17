@@ -1581,6 +1581,9 @@ before the last command."
   (concat (file-name-as-directory (concat monky-el-directory "style"))
           filename))
 
+(defvar monky-hg-style-log-graph
+  (monky-get-style-path "log-graph"))
+
 (defvar monky-hg-style-files
   (monky-get-style-path "files"))
 
@@ -1924,16 +1927,23 @@ before the last command."
 
 (defvar monky-log-buffer-name "*monky-log*")
 
+(defun monky-propertize-labels (label-list &rest properties)
+  "Propertize labels (tag/branch/bookmark/...) in LABEL-LIST.
+
+PROPERTIES is the arguments for the function `propertize'."
+  (apply #'concat
+         (apply #'append
+                (mapcar (lambda (l)
+                          (unless (or (string= l "") (string= l "None"))
+                            (list (apply #'propertize l properties) " ")))
+                        label-list))))
+
 (defun monky-present-log-line (graph id branches tags message)
   (concat (propertize (substring id 0 8) 'face 'monky-log-sha1)
           " "
           graph
-          (unless (or (string= branches "") (string= branches "None"))
-            (concat
-             (propertize branches 'face 'monky-log-head-label-local) " "))
-          (unless (string= tags "")
-            (concat
-             (propertize tags 'face 'monky-log-head-label-tags) " "))
+          (monky-propertize-labels branches 'face 'monky-log-head-label-local)
+          (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
           (propertize message 'face 'monky-log-message)))
 
 (defun monky-log ()
@@ -1948,17 +1958,10 @@ before the last command."
   (concat
    "^\\([-\\/@o+|\s]+\s*\\) "           ; 1. graph
    "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
-   "<branches>\\([^<]*\\)</branches>"   ; 3. branches
-   "<tags>\\([^<]*\\)</tags>"           ; 4. tags
+   "<branches>\\(.?*\\)</branches>"     ; 3. branches
+   "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "\\(.*\\)$"                          ; 5. msg
    ))
-
-(defvar monky-log-graph-template
-  (concat
-   "{node} "
-   "<branches>{branches|stringify|escape}</branches>"
-   "<tags>{tags|stringify|escape}</tags>"
-   "{desc|firstline}\n"))
 
 (defun monky-decode-xml-entities (str)
   (setq str (replace-regexp-in-string "&lt;" "<" str))
@@ -1966,16 +1969,32 @@ before the last command."
   (setq str (replace-regexp-in-string "&amp;" "&" str))
   str)
 
+(defun monky-xml-items-to-list (xml-like tag)
+  "Convert XML-LIKE string which has repeated TAG items into a list of strings.
+
+Example:
+    (monky-xml-items-to-list \"<tag>A</tag><tag>B</tag>\" \"tag\")
+    ; => (\"A\" \"B\")
+"
+  (mapcar #'monky-decode-xml-entities
+          (split-string (replace-regexp-in-string
+                         (format "^<%s>\\|</%s>$" tag tag) "" xml-like)
+                        (format "</%s><%s>" tag tag))))
+
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
       (let ((graph (match-string 1))
             (id (match-string 2))
             (branches (match-string 3))
-            (tags (monky-decode-xml-entities (match-string 4)))
-            (msg (monky-decode-xml-entities (match-string 5))))
+            (tags (match-string 4))
+            (msg (match-string 5)))
         (monky-delete-line)
         (monky-with-section id 'commit
-          (insert (monky-present-log-line graph id branches tags msg))
+          (insert (monky-present-log-line
+                   graph id
+                   (monky-xml-items-to-list branches "branch")
+                   (monky-xml-items-to-list tags "tag")
+                   (monky-decode-xml-entities msg)))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
           (forward-line)
@@ -2032,7 +2051,7 @@ With a non numeric prefix ARG, show all entries"
                       "--config" "extensions.graphlog="
                       "-G"
                       "--limit" (number-to-string monky-log-cutoff-length)
-                      "--template" monky-log-graph-template)))
+                      "--style" monky-hg-style-log-graph)))
 
 (defun monky-next-sha1 (pos)
   "Return position of next sha1 after given position POS"
