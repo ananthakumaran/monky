@@ -310,6 +310,8 @@ refreshes buffers."
 (defvar monky-cmd-process-input-buffer nil)
 (defvar monky-cmd-process-input-point nil)
 (defvar monky-cmd-error-message nil)
+(defvar monky-cmd-hello-message nil
+  "Variable to store parsed hello message.")
 
 (monky-def-permanent-buffer-local monky-root-dir)
 
@@ -336,6 +338,12 @@ refreshes buffers."
          (channel (bindat-get-field data 'channel))
          (len (bindat-get-field data 'len)))
     (cons channel (monky-cmdserver-read-data len))))
+
+(defun monky-cmdserver-unpack-int (data)
+  (bindat-get-field (bindat-unpack '((field u32)) data) 'field))
+
+(defun monky-cmdserver-unpack-string (data)
+  (bindat-get-field (bindat-unpack `((field str ,(length data))) data) 'field))
 
 (defun monky-cmdserver-write (data)
   (process-send-string monky-cmd-process
@@ -365,11 +373,34 @@ refreshes buffers."
       (let ((monky-cmd-process (monky-start-process "monky-hg" buf "sh" "-c" "hg --config extensions.mq= serve --cmdserver pipe 2> /dev/null")))
         (set-process-coding-system monky-cmd-process 'no-conversion 'no-conversion)
         (set-process-sentinel monky-cmd-process #'monky-cmdserver-sentinel)
-        (monky-cmdserver-read) ; read hello
+        (setq monky-cmd-hello-message
+              (monky-cmdserver-parse-hello (monky-cmdserver-read)))
         monky-cmd-process))))
 
 (defun monky-cmdserver-stop (proc)
   (delete-process proc))
+
+(defun monky-cmdserver-parse-hello (hello-message)
+  "Parse hello message to get encoding information."
+  (let ((channel (car hello-message))
+        (text (cdr hello-message)))
+    (if (eq channel ?o)
+        (progn
+          (mapcar
+           (lambda (s)
+             (string-match "^\\([a-z0-9]+\\) *: *\\(.*\\)$" s)
+             (let ((field-name (match-string 1 s))
+                   (field-data (match-string 2 s)))
+               (cons (intern field-name) field-data)))
+           (split-string (monky-cmdserver-unpack-string text) "\n")))
+      (error "unknown channel %c for hello message" channel))))
+
+(defun monky-cmdserver-get-encoding (&optional default)
+  "Get encoding stored in `monky-cmd-hello-message'."
+  (let ((e (assoc 'encoding monky-cmd-hello-message)))
+    (if e
+        (intern (cdr e))
+      default)))
 
 (defun monky-cmdserver-runcommand (&rest cmd-and-args)
   (setq monky-cmd-error-message nil)
@@ -378,36 +409,43 @@ refreshes buffers."
     (erase-buffer))
   (process-send-string monky-cmd-process "runcommand\n")
   (monky-cmdserver-write (mapconcat #'identity cmd-and-args "\0"))
-  (let ((inhibit-read-only t))
-    (catch 'finished
-      (while t
-        (let* ((result (monky-cmdserver-read))
-               (channel (car result))
-               (text (cdr result)))
-          (cond
-           ((eq channel ?o)
-            (insert (concat text)))
-           ((eq channel ?r)
-            (throw 'finished
-                   (bindat-get-field (bindat-unpack '((code u32)) text) 'code)))
-           ((eq channel ?e)
-            (setq monky-cmd-error-message (concat monky-cmd-error-message text)))
-           ((memq channel '(?I ?L))
-            (with-current-buffer monky-cmd-process-input-buffer
-              (let* ((max (if (eq channel ?I)
-                              (point-max)
-                            (save-excursion
-                              (goto-point monky-cmd-process-input-point)
-                              (line-beginning-position 2))))
-                     (maxreq (bindat-get-field (bindat-unpack '((len u32)) text) 'len))
-                     (len (min (- max monky-cmd-process-input-point) maxreq))
-                     (end (+ monky-cmd-process-input-point len)))
-
-                (monky-cmdserver-write
-                 (buffer-substring monky-cmd-process-input-point end))
-                (setq monky-cmd-process-input-point end))))
-           (t
-            (setq monky-cmd-error-message (format "Unsupported channel: %c" channel)))))))))
+  (let* ((inhibit-read-only t)
+         (start (point))
+         (result
+          (catch 'finished
+            (while t
+              (let* ((result (monky-cmdserver-read))
+                     (channel (car result))
+                     (text (cdr result)))
+                (cond
+                 ((eq channel ?o)
+                  (insert (monky-cmdserver-unpack-string text)))
+                 ((eq channel ?r)
+                  (throw 'finished
+                         (monky-cmdserver-unpack-int text)))
+                 ((eq channel ?e)
+                  (setq monky-cmd-error-message
+                        (concat monky-cmd-error-message text)))
+                 ((memq channel '(?I ?L))
+                  (with-current-buffer monky-cmd-process-input-buffer
+                    (let* ((max (if (eq channel ?I)
+                                    (point-max)
+                                  (save-excursion
+                                    (goto-point monky-cmd-process-input-point)
+                                    (line-beginning-position 2))))
+                           (maxreq (monky-cmdserver-unpack-int text))
+                           (len (min (- max monky-cmd-process-input-point)
+                                     maxreq))
+                           (end (+ monky-cmd-process-input-point len)))
+                      (monky-cmdserver-write
+                       (buffer-substring monky-cmd-process-input-point end))
+                      (setq monky-cmd-process-input-point end))))
+                 (t
+                  (setq monky-cmd-error-message
+                        (format "Unsupported channel: %c" channel)))))))))
+    (decode-coding-region start (point)
+                          (monky-cmdserver-get-encoding 'utf-8))
+    result))
 
 (defun monky-cmdserver-process-file (program infile buffer display &rest args)
   "Same as `process-file' but uses the currently active hg command-server."
