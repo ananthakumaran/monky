@@ -399,7 +399,7 @@ refreshes buffers."
   "Get encoding stored in `monky-cmd-hello-message'."
   (let ((e (assoc 'encoding monky-cmd-hello-message)))
     (if e
-        (intern (cdr e))
+        (intern (downcase (cdr e)))
       default)))
 
 (defun monky-cmdserver-runcommand (&rest cmd-and-args)
