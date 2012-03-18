@@ -556,6 +556,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "m") 'monky-resolve-item)
     (define-key map (kbd "x") 'monky-unresolve-item)
     (define-key map (kbd "X") 'monky-reset-tip)
+    (define-key map (kbd "A") 'monky-addremove-all)
     map))
 
 (defvar monky-log-mode-map
@@ -594,6 +595,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "d") 'monky-qfold-item)
     (define-key map (kbd "G") 'monky-qguard-item)
     (define-key map (kbd "o") 'monky-qreorder)
+    (define-key map (kbd "A") 'monky-addremove-all)
     map))
 
 (defvar monky-log-edit-mode-map
@@ -1280,6 +1282,10 @@ With a prefix argument, visit in other window."
   (interactive)
   (when (yes-or-no-p "Discard all uncommitted changes? ")
       (monky-run-hg "update" "--clean")))
+
+(defun monky-addremove-all ()
+  (interactive)
+  (monky-run-hg "addremove"))
 
 ;;; Merging
 
