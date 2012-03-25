@@ -605,6 +605,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "x") 'monky-unresolve-item)
     (define-key map (kbd "X") 'monky-reset-tip)
     (define-key map (kbd "A") 'monky-addremove-all)
+    (define-key map (kbd "L") 'monky-rollback)
     map))
 
 (defvar monky-log-mode-map
@@ -1338,6 +1339,10 @@ With a prefix argument, visit in other window."
 (defun monky-addremove-all ()
   (interactive)
   (monky-run-hg "addremove"))
+
+(defun monky-rollback ()
+  (interactive)
+  (monky-run-hg "rollback"))
 
 ;;; Merging
 
