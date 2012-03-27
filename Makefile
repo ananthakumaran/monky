@@ -2,6 +2,11 @@ VERSION=0.1
 ELS=monky.el
 DIST_FILES=$(ELS) Makefile monky.texi monky.info README.md monky-pkg.el.in monky-pkg.el
 
+all: monky.elc monky.info
+
+monky.elc: monky.el
+	emacs -Q --batch -f batch-byte-compile monky.el
+
 monky-pkg.el: monky-pkg.el.in
 	sed -e s/@VERSION@/$(VERSION)/ < $< > $@
 
