@@ -889,14 +889,7 @@ CMD is an external command that will be run with ARGS as arguments"
      (next
       (goto-char (monky-section-beginning next))
       (if (memq monky-submode '(log blame))
-          (monky-show-commit next))
-      (if (not (monky-section-hidden next))
-          (let ((offset (- (line-number-at-pos
-                            (monky-section-beginning next))
-                           (line-number-at-pos
-                            (monky-section-end next)))))
-            (if (< offset 0)
-                (recenter offset)))))
+          (monky-show-commit next)))
      (t (message "No next section")))))
 
 (defun monky-prev-section (section)
