@@ -132,7 +132,7 @@ Many Monky faces inherit from this one by default."
 (defface monky-branch
   '((t :weight bold :inherit monky-header))
   "Face for the current branch."
-  :group 'monky)
+  :group 'monky-faces)
 
 (defface monky-diff-title
   '((t :inherit (monky-header highlight)))
@@ -205,7 +205,7 @@ Many Monky faces inherit from this one by default."
 (defface monky-queue-patch
   '((t :weight bold :inherit (monky-header highlight)))
   "Face for patch name"
-  :group 'monky)
+  :group 'monky-faces)
 
 (defface monky-log-head-label-bookmarks
   '((((class color) (background light))
@@ -241,7 +241,7 @@ Many Monky faces inherit from this one by default."
      :background "light green"
      :foreground "dark olive green"))
   "Face for active patch queue"
-  :group 'monky)
+  :group 'monky-faces)
 
 (defface monky-queue-positive-guard
   '((((class color) (background light))
@@ -253,7 +253,7 @@ Many Monky faces inherit from this one by default."
      :background "light green"
      :foreground "dark olive green"))
   "Face for queue postive guards"
-  :group 'monky)
+  :group 'monky-faces)
 
 (defface monky-queue-negative-guard
   '((((class color) (background light))
@@ -265,7 +265,7 @@ Many Monky faces inherit from this one by default."
      :background "IndianRed1"
      :foreground "IndianRed4"))
   "Face for queue negative guards"
-  :group 'monky)
+  :group 'monky-faces)
 
 (defvar monky-mode-hook nil
   "Hook run by `monky-mode'.")
