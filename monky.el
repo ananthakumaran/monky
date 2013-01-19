@@ -24,7 +24,7 @@
 
 ;;; Code:
 
-(eval-when-compile (require 'cl))
+(require 'cl)
 (require 'bindat)
 
 (defgroup monky nil
@@ -455,7 +455,7 @@ refreshes buffers."
                     (let* ((max (if (eq channel ?I)
                                     (point-max)
                                   (save-excursion
-                                    (goto-point monky-cmd-process-input-point)
+                                    (goto-char monky-cmd-process-input-point)
                                     (line-beginning-position 2))))
                            (maxreq (monky-cmdserver-unpack-int text))
                            (len (min (- max monky-cmd-process-input-point)
@@ -1994,11 +1994,11 @@ before the last command."
   :keymap monky-status-mode-map)
 
 ;;;###autoload
-(defun monky-status ()
+(defun monky-status (&optional directory)
   "Show the status of Hg repository."
   (interactive)
   (monky-with-process
-    (let* ((rootdir (monky-get-root-dir))
+    (let* ((rootdir (or directory (monky-get-root-dir)))
            (buf (or (monky-find-status-buffer rootdir)
                     (generate-new-buffer
                      (concat "*monky: "
@@ -2879,5 +2879,9 @@ With a non numeric prefix ARG, show all entries"
     (monky-pop-to-log-edit 'commit)))
 
 (provide 'monky)
+
+;; Local Variables:
+;; byte-compile-warnings: (not cl-functions)
+;; End:
 
 ;;; monky.el ends here
