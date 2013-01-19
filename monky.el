@@ -1994,11 +1994,11 @@ before the last command."
   :keymap monky-status-mode-map)
 
 ;;;###autoload
-(defun monky-status ()
+(defun monky-status (&optional directory)
   "Show the status of Hg repository."
   (interactive)
   (monky-with-process
-    (let* ((rootdir (monky-get-root-dir))
+    (let* ((rootdir (or directory (monky-get-root-dir)))
            (buf (or (monky-find-status-buffer rootdir)
                     (generate-new-buffer
                      (concat "*monky: "
