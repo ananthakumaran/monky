@@ -1444,8 +1444,8 @@ buffer instead."
   (dolist (buffer (buffer-list))
     (when (and buffer
                (buffer-file-name buffer)
-               (file-readable-p (buffer-file-name buffer))
                (monky-string-starts-with-p (buffer-file-name buffer) dir)
+               (file-readable-p (buffer-file-name buffer))
                (or ignore-modtime (not (verify-visited-file-modtime buffer)))
                (not (buffer-modified-p buffer)))
       (with-current-buffer buffer
