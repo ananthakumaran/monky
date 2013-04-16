@@ -1628,7 +1628,7 @@ before the last command."
       (error "Not inside a hg repo"))))
 
 (defun monky-find-buffer (submode &optional dir)
-  (let ((rootdir (or dir (monky-get-root-dir))))
+  (let ((rootdir (expand-file-name (or dir (monky-get-root-dir)))))
     (find-if (lambda (buf)
                (with-current-buffer buf
                  (and default-directory
