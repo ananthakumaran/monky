@@ -733,6 +733,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "M") 'monky-merge-item)
     (define-key map (kbd "B") 'monky-backout-item)
     (define-key map (kbd "i") 'monky-qimport-item)
+    (define-key map (kbd "E") 'monky-histedit-item)
     map))
 
 (defvar monky-blame-mode-map
@@ -1525,6 +1526,10 @@ With a prefix argument, visit in other window."
 (defun monky-merge (node)
   (interactive (list (monky-read-revision "Merge with: ")))
   (monky-run-hg "merge" node))
+
+(defun monky-histedit (node)
+  (interactive (list (monky-read-revision "Edit history starting from: ")))
+  (monky-run-hg-async "histedit" "--rev" node "--config" "ui.interface.histedit=text"))
 
 (defun monky-reset-tip ()
   (interactive)
@@ -2724,6 +2729,15 @@ With a non numeric prefix ARG, show all entries"
      (monky-merge (monky-section-info (monky-current-section))))
     ((log commits commit)
      (monky-merge (monky-section-info (monky-current-section))))))
+
+(defun monky-histedit-item ()
+  "Edit history starting from the revision represented by current item."
+  (interactive)
+  (monky-section-action "histedit"
+    ((branch)
+     (monky-histedit (monky-section-info (monky-current-section))))
+    ((log commits commit)
+     (monky-histedit (monky-section-info (monky-current-section))))))
 
 ;;; Queue mode
 (define-minor-mode monky-queue-mode
