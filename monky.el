@@ -1796,8 +1796,8 @@ before the last command."
   (cadr (monky-section-info diff)))
 
 (defun monky-diff-line-file ()
-  (cond ((looking-at "^diff -r \\([^ ]*\\) \\(.*\\)$")
-         (match-string-no-properties 2))
+  (cond ((looking-at "^diff -r \\([^ ]*\\) \\(-r \\([^ ]*\\) \\)?\\(.*\\)$")
+         (match-string-no-properties 4))
         (t
          nil)))
 
