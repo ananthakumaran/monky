@@ -42,3 +42,8 @@ code, kbd {
     font-size:90% ;
     padding:0 0.2em ;
 }
+
+.node {
+    visibility: hidden;
+    height: 0;
+}
