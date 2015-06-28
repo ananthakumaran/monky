@@ -622,6 +622,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "S") 'monky-stage-all)
     (define-key map (kbd "u") 'monky-unstage-item)
     (define-key map (kbd "U") 'monky-unstage-all)
+    (define-key map (kbd "a") 'monky-commit-amend)
     (define-key map (kbd "c") 'monky-log-edit)
     (define-key map (kbd "C") 'monky-checkout)
     (define-key map (kbd "B") 'monky-backout)
