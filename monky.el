@@ -2894,14 +2894,12 @@ With a non numeric prefix ARG, show all entries"
   "Amends previous commit.
 Brings up a buffer to allow editing of commit message."
   (interactive)
-  (if (not (or monky-staged-files (monky-merge-p)))
-      (error "Nothing staged")
-	;; get last commit message
-	(with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
-	  (monky-hg-insert
-	   (list "log"
-			 "--template" "{desc}" "-r" "-1")))
-	(monky-pop-to-log-edit 'amend)))
+  ;; get last commit message
+  (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+	(monky-hg-insert
+	 (list "log"
+		   "--template" "{desc}" "-r" ".")))
+  (monky-pop-to-log-edit 'amend))
 
 (provide 'monky)
 
