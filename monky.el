@@ -622,6 +622,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "S") 'monky-stage-all)
     (define-key map (kbd "u") 'monky-unstage-item)
     (define-key map (kbd "U") 'monky-unstage-all)
+    (define-key map (kbd "a") 'monky-commit-amend)
     (define-key map (kbd "c") 'monky-log-edit)
     (define-key map (kbd "C") 'monky-checkout)
     (define-key map (kbd "B") 'monky-backout)
@@ -2818,6 +2819,13 @@ With a non numeric prefix ARG, show all entries"
                 (append monky-hg-standard-options
                         (list "commit" "--logfile" "-")
                         monky-staged-files))))
+	  ('amend
+       (with-current-buffer (monky-find-status-buffer default-directory)
+         (apply #'monky-run-async-with-input commit-buf
+                monky-hg-executable
+                (append monky-hg-standard-options
+                        (list "commit" "--amend" "--logfile" "-")
+                        monky-staged-files))))
       ('backout
        (with-current-buffer monky-log-edit-client-buffer
          (monky-run-async-with-input commit-buf
@@ -2881,6 +2889,17 @@ With a non numeric prefix ARG, show all entries"
   (if (not (or monky-staged-files (monky-merge-p)))
       (error "Nothing staged")
     (monky-pop-to-log-edit 'commit)))
+
+(defun monky-commit-amend ()
+  "Amends previous commit.
+Brings up a buffer to allow editing of commit message."
+  (interactive)
+  ;; get last commit message
+  (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
+	(monky-hg-insert
+	 (list "log"
+		   "--template" "{desc}" "-r" ".")))
+  (monky-pop-to-log-edit 'amend))
 
 (provide 'monky)
 
