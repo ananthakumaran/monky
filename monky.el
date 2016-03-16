@@ -2819,7 +2819,7 @@ With a non numeric prefix ARG, show all entries"
                 (append monky-hg-standard-options
                         (list "commit" "--logfile" "-")
                         monky-staged-files))))
-	  ('amend
+      ('amend
        (with-current-buffer (monky-find-status-buffer default-directory)
          (apply #'monky-run-async-with-input commit-buf
                 monky-hg-executable
@@ -2896,9 +2896,9 @@ Brings up a buffer to allow editing of commit message."
   (interactive)
   ;; get last commit message
   (with-current-buffer (get-buffer-create monky-log-edit-buffer-name)
-	(monky-hg-insert
-	 (list "log"
-		   "--template" "{desc}" "-r" ".")))
+    (monky-hg-insert
+     (list "log"
+           "--template" "{desc}" "-r" ".")))
   (monky-pop-to-log-edit 'amend))
 
 (provide 'monky)
