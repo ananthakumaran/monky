@@ -2059,9 +2059,11 @@ PROPERTIES is the arguments for the function `propertize'."
       (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
       (monky-log-mode t))))
 
+(setq monky-graph-chars "\\([\\/\:\~@xo+-|\s]+\s*\\)")
+
 (defvar monky-log-graph-re
   (concat
-   "^\\([-\\/@xo+|\s]+\s*\\) "          ; 1. graph
+   "^" monky-graph-chars " "            ; 1. graph
    "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
    "<branches>\\(.?*\\)</branches>"     ; 3. branches
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
@@ -2109,7 +2111,13 @@ Example:
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
           (forward-line)
-          (when (looking-at "^\\([\\/@xo+-|\s]+\s*\\)$")
+
+          ;; consume all intermediate graph lines
+          (while (and
+                  ;; The line does *not* look like a line with log XML
+                  (not (looking-at (concat "^" monky-graph-chars " <")))
+                  ;; but it *does* look like a graph line
+                  (looking-at (concat "^" monky-graph-chars "$")))
             (let ((graph (match-string 1)))
               (insert "         ")
               (forward-line))))
