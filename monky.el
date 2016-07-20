@@ -148,7 +148,7 @@ Many Monky faces inherit from this one by default."
   '((((class color) (background light))
      :foreground "blue1")
     (((class color) (background dark))
-     :foreground "white"))
+     :foreground "green3"))
   "Face for lines in a diff that have been added."
   :group 'monky-faces)
 
@@ -161,7 +161,7 @@ Many Monky faces inherit from this one by default."
   '((((class color) (background light))
      :foreground "red")
     (((class color) (background dark))
-     :foreground "OrangeRed"))
+     :foreground "red"))
   "Face for lines in a diff that have been deleted."
   :group 'monky-faces)
 
@@ -269,6 +269,11 @@ Many Monky faces inherit from this one by default."
 
 (defvar monky-mode-hook nil
   "Hook run by `monky-mode'.")
+
+;;; User facing configuration
+
+(defvar monky-default-commit-msg ""
+  "Default text inserted by monky on new commit")
 
 (put 'monky-mode 'mode-class 'special)
 
@@ -624,6 +629,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "U") 'monky-unstage-all)
     (define-key map (kbd "a") 'monky-commit-amend)
     (define-key map (kbd "c") 'monky-log-edit)
+    (define-key map (kbd "y") 'monky-bookmark-create)
     (define-key map (kbd "C") 'monky-checkout)
     (define-key map (kbd "B") 'monky-backout)
     (define-key map (kbd "P") 'monky-push)
@@ -2289,6 +2295,7 @@ With a non numeric prefix ARG, show all entries"
   (monky-create-buffer-sections
     (monky-hg-section nil nil
                       'monky-wash-commit
+                      "-v"
                       "log"
                       "--patch"
                       "--rev" commit)))
@@ -2881,6 +2888,10 @@ With a non numeric prefix ARG, show all entries"
     (pop-to-buffer buf)
     (setq default-directory dir)
     (monky-log-edit-mode)
+    ;; don't insert if not a new commit
+    (if (and (eq operation 'commit)
+             (= (point-min) (point-max)))
+        (insert monky-default-commit-msg))
     (message "Type C-c C-c to %s (C-c C-k to cancel)." monky-log-edit-operation)))
 
 (defun monky-log-edit ()
@@ -2900,6 +2911,11 @@ Brings up a buffer to allow editing of commit message."
      (list "log"
            "--template" "{desc}" "-r" ".")))
   (monky-pop-to-log-edit 'amend))
+
+(defun monky-bookmark-create (bookmark-name)
+  "Create a bookmark at the current location"
+  (interactive "sBookmark name: ")
+  (monky-run-hg-async "bookmark" bookmark-name))
 
 (provide 'monky)
 
