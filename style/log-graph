@@ -1,5 +1,6 @@
-changeset = "{node} <branches>{branches}</branches><tags>{tags}</tags><bookmarks>{bookmarks}</bookmarks><phase>{phase|escape}</phase>{desc|firstline}\n"
+changeset = "{node} <branches>{branches}</branches><tags>{tags}</tags><bookmarks>{bookmarks}</bookmarks><phase>{phase|escape}</phase><date>{date|shortdate}</date>{desc|firstline}\n"
 
 branch = '<branch>{branch|escape}</branch>'
 tag = '<tag>{tag|escape}</tag>'
 bookmark = '<bookmark>{bookmark|escape}</bookmark>'
+date = '<date>{date|shortdate}</date>'
