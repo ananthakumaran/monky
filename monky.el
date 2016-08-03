@@ -178,6 +178,14 @@ Many Monky faces inherit from this one by default."
   "Face for the message element of the log output."
   :group 'monky-faces)
 
+(defface monky-log-author
+  '((((class color) (background light))
+     :foreground "navy")
+    (((class color) (background dark))
+     :foreground "cornflower blue"))
+  "Face for author shown in log buffer."
+  :group 'monky-faces)
+
 (defface monky-log-head-label-local
   '((((class color) (background light))
      :box t
@@ -2043,7 +2051,7 @@ PROPERTIES is the arguments for the function `propertize'."
                             (list (apply #'propertize l properties) " ")))
                         label-list))))
 
-(defun monky-present-log-line (graph id branches tags bookmarks phase message)
+(defun monky-present-log-line (graph id branches tags bookmarks phase message author)
   (concat
    (propertize (substring id 0 8) 'face 'monky-log-sha1)
    " "
@@ -2053,7 +2061,8 @@ PROPERTIES is the arguments for the function `propertize'."
    (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
    (unless (or (string= phase "") (string= phase "public"))
      (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))
-   (propertize message 'face 'monky-log-message)))
+   (propertize message 'face 'monky-log-message)
+   (propertize (concat "  " author) 'face 'monky-log-author)))
 
 (defun monky-log ()
   (interactive)
@@ -2073,7 +2082,8 @@ PROPERTIES is the arguments for the function `propertize'."
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
    "<phase>\\(.?*\\)</phase>"           ; 6. phase
-   "\\(.*\\)$"                          ; 7. msg
+   "<author>\\(.?*\\)</author>"         ; 7. author
+   "\\(.*\\)$"                          ; 8. msg
    ))
 
 (defun monky-decode-xml-entities (str)
@@ -2102,7 +2112,8 @@ Example:
             (tags (match-string 4))
             (bookmarks (match-string 5))
             (phase (match-string 6))
-            (msg (match-string 7)))
+            (author (match-string 7))
+            (msg (match-string 8)))
         (monky-delete-line)
         (monky-with-section id 'commit
           (insert (monky-present-log-line
@@ -2111,7 +2122,8 @@ Example:
                    (monky-xml-items-to-list tags "tag")
                    (monky-xml-items-to-list bookmarks "bookmark")
                    (monky-decode-xml-entities phase)
-                   (monky-decode-xml-entities msg)))
+                   (monky-decode-xml-entities msg)
+                   (monky-decode-xml-entities author)))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
           (forward-line)
