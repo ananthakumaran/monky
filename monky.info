@@ -94,6 +94,8 @@ _Changes_ section will list all the changes in the repo. Using monky
 you can select a subset of your changes and commit it. Type `s' to
 stage a file. Typing `S' will stage all files.
 
+Typing `TAB' will toggle the diff view for a changed file.
+
    _Staged Changes_ section will list all the staged changes in the
 repo. Type `u' to unstage a file. Typing `U' will unstage all the
 previously staged files.
