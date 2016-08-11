@@ -2076,7 +2076,7 @@ PROPERTIES is the arguments for the function `propertize'."
 
 (defvar monky-log-graph-re
   (concat
-   "^\\([-\\/@o+|\s]+\s*\\) "           ; 1. graph
+   "^\\([-_\\/@o+|\s]+\s*\\) "           ; 1. graph
    "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
    "<branches>\\(.?*\\)</branches>"     ; 3. branches
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
