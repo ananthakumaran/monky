@@ -2051,7 +2051,7 @@ PROPERTIES is the arguments for the function `propertize'."
                             (list (apply #'propertize l properties) " ")))
                         label-list))))
 
-(defun monky-present-log-line (graph id branches tags bookmarks phase message author)
+(defun monky-present-log-line (graph id branches tags bookmarks phase author date message)
   (concat
    (propertize (substring id 0 8) 'face 'monky-log-sha1)
    " "
@@ -2062,7 +2062,8 @@ PROPERTIES is the arguments for the function `propertize'."
    (unless (or (string= phase "") (string= phase "public"))
      (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))
    (propertize message 'face 'monky-log-message)
-   (propertize (concat "  " author) 'face 'monky-log-author)))
+   (propertize (concat "  " author) 'face 'monky-log-author)
+   (propertize (concat " - " date) 'face 'monky-log-author)))
 
 (defun monky-log ()
   (interactive)
@@ -2076,14 +2077,15 @@ PROPERTIES is the arguments for the function `propertize'."
 
 (defvar monky-log-graph-re
   (concat
-   "^\\([-_\\/@o+|\s]+\s*\\) "           ; 1. graph
+   "^\\([-_\\/@o+|\s]+\s*\\) "          ; 1. graph
    "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
    "<branches>\\(.?*\\)</branches>"     ; 3. branches
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
    "<phase>\\(.?*\\)</phase>"           ; 6. phase
-   "<author>\\(.?*\\)</author>"         ; 7. author
-   "\\(.*\\)$"                          ; 8. msg
+   "<author>\\([A-z]+\\).?*</author>"   ; 7. author
+   "<monky-date>\\([0-9]+\\).?*</monky-date>" ; 8. date
+   "\\(.*\\)$"                          ; 9. msg
    ))
 
 (defun monky-decode-xml-entities (str)
@@ -2113,7 +2115,8 @@ Example:
             (bookmarks (match-string 5))
             (phase (match-string 6))
             (author (match-string 7))
-            (msg (match-string 8)))
+            (date (format-time-string "%b-%d-%y" (seconds-to-time (string-to-number (match-string 8)))))
+            (msg (match-string 9)))
         (monky-delete-line)
         (monky-with-section id 'commit
           (insert (monky-present-log-line
@@ -2122,8 +2125,9 @@ Example:
                    (monky-xml-items-to-list tags "tag")
                    (monky-xml-items-to-list bookmarks "bookmark")
                    (monky-decode-xml-entities phase)
-                   (monky-decode-xml-entities msg)
-                   (monky-decode-xml-entities author)))
+                   (monky-decode-xml-entities author)
+                   (monky-decode-xml-entities date)
+                   (monky-decode-xml-entities msg)))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
           (forward-line)
