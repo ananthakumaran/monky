@@ -2051,19 +2051,28 @@ PROPERTIES is the arguments for the function `propertize'."
                             (list (apply #'propertize l properties) " ")))
                         label-list))))
 
-(defun monky-present-log-line (graph id branches tags bookmarks phase author date message)
-  (concat
-   (propertize (substring id 0 8) 'face 'monky-log-sha1)
-   " "
-   graph
-   (monky-propertize-labels branches 'face 'monky-log-head-label-local)
-   (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
-   (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
-   (unless (or (string= phase "") (string= phase "public"))
-     (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))
-   (propertize message 'face 'monky-log-message)
-   (propertize (concat "  " author) 'face 'monky-log-author)
-   (propertize (concat " - " date) 'face 'monky-log-author)))
+(defun monky-present-log-line (width graph id branches tags bookmarks phase author date message)
+  (let* ((hg-info (concat
+                   (propertize (substring id 0 8) 'face 'monky-log-sha1)
+                   " "
+                   graph
+                   (monky-propertize-labels branches 'face 'monky-log-head-label-local)
+                   (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
+                   (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
+                   (unless (or (string= phase "") (string= phase "public"))
+                     (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))))
+         (total-space-left (- width (length hg-info)))
+         (author-date-space-taken (+ 16 (min 10 (length author))))
+         (message-space-left (number-to-string (- total-space-left author-date-space-taken 1)))
+         (msg-format (concat "%-" message-space-left "." message-space-left "s"))
+         (msg (format msg-format message)))
+    (let ((msg (if (>= (string-to-number message-space-left) (length message))
+                   msg
+                 (concat (substring msg 0 -3) "..."))))
+      (concat
+       hg-info
+       (propertize msg 'face 'monky-log-message)
+       (propertize (format " %.9s %9.9s" author date) 'face 'monky-log-author)))))
 
 (defun monky-log ()
   (interactive)
@@ -2108,7 +2117,8 @@ Example:
 
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
-      (let ((graph (match-string 1))
+      (let ((width (window-total-width))
+            (graph (match-string 1))
             (id (match-string 2))
             (branches (match-string 3))
             (tags (match-string 4))
@@ -2120,6 +2130,7 @@ Example:
         (monky-delete-line)
         (monky-with-section id 'commit
           (insert (monky-present-log-line
+                   width
                    graph id
                    (monky-xml-items-to-list branches "branch")
                    (monky-xml-items-to-list tags "tag")
