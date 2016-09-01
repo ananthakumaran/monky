@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'cl-lib)
 (require 'bindat)
 
 (defgroup monky nil
@@ -2943,6 +2944,15 @@ Brings up a buffer to allow editing of commit message."
   "Create a bookmark at the current location"
   (interactive "sBookmark name: ")
   (monky-run-hg-async "bookmark" bookmark-name))
+
+(defun killall-monky-buffers ()
+  (interactive)
+  (cl-flet ((monky-buffer-p (b) (string-match "\*monky\\(:\\|-\\).*" (buffer-name b))))
+    (let ((monky-buffers (cl-remove-if-not #'monky-buffer-p (buffer-list))))
+      (cl-loop for mb in monky-buffers
+               do
+               (kill-buffer mb)))))
+
 
 (provide 'monky)
 
