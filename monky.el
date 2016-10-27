@@ -281,9 +281,6 @@ Many Monky faces inherit from this one by default."
 
 ;;; User facing configuration
 
-(defvar monky-default-commit-msg ""
-  "Default text inserted by monky on new commit")
-
 (put 'monky-mode 'mode-class 'special)
 
 ;;; Compatibilities
@@ -2916,10 +2913,6 @@ With a non numeric prefix ARG, show all entries"
     (pop-to-buffer buf)
     (setq default-directory dir)
     (monky-log-edit-mode)
-    ;; don't insert if not a new commit
-    (if (and (eq operation 'commit)
-             (= (point-min) (point-max)))
-        (insert monky-default-commit-msg))
     (message "Type C-c C-c to %s (C-c C-k to cancel)." monky-log-edit-operation)))
 
 (defun monky-log-edit ()
@@ -2945,14 +2938,13 @@ Brings up a buffer to allow editing of commit message."
   (interactive "sBookmark name: ")
   (monky-run-hg-async "bookmark" bookmark-name))
 
-(defun killall-monky-buffers ()
+(defun monky-killall-monky-buffers ()
   (interactive)
   (cl-flet ((monky-buffer-p (b) (string-match "\*monky\\(:\\|-\\).*" (buffer-name b))))
     (let ((monky-buffers (cl-remove-if-not #'monky-buffer-p (buffer-list))))
       (cl-loop for mb in monky-buffers
                do
                (kill-buffer mb)))))
-
 
 (provide 'monky)
 
