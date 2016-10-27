@@ -621,7 +621,8 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "g") 'monky-refresh)
     (define-key map (kbd "$") 'monky-display-process)
     (define-key map (kbd ":") 'monky-hg-command)
-    (define-key map (kbd "l") 'monky-log)
+    (define-key map (kbd "l l") 'monky-log-current-branch)
+    (define-key map (kbd "l a") 'monky-log-all)
     (define-key map (kbd "b") 'monky-branches)
     (define-key map (kbd "Q") 'monky-queue)
     (define-key map (kbd "q") 'monky-quit-window)
@@ -2072,14 +2073,21 @@ PROPERTIES is the arguments for the function `propertize'."
        (propertize msg 'face 'monky-log-message)
        (propertize (format " %.9s %9.9s" author date) 'face 'monky-log-author)))))
 
-(defun monky-log ()
+(defun monky-log-current-branch ()
   (interactive)
+  (monky-log "ancestors(.)"))
+
+(defun monky-log-all ()
+  (interactive)
+  (monky-log nil))
+
+(defun monky-log (revs)
   (monky-with-process
     (let ((topdir (monky-get-root-dir)))
       (pop-to-buffer monky-log-buffer-name)
       (setq default-directory topdir
             monky-root-dir topdir)
-      (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
+      (monky-mode-init topdir 'log (monky-refresh-log-buffer revs))
       (monky-log-mode t))))
 
 (defvar monky-log-graph-re
@@ -2185,15 +2193,19 @@ With a non numeric prefix ARG, show all entries"
    (t (setq monky-log-cutoff-length (* monky-log-cutoff-length 2))))
   (monky-refresh))
 
-(defun monky-refresh-log-buffer ()
-  (monky-create-log-buffer-sections
-    (monky-hg-section 'commits "Commits:"
-                      #'monky-wash-logs
-                      "log"
-                      "--config" "extensions.graphlog="
-                      "-G"
-                      "--limit" (number-to-string monky-log-cutoff-length)
-                      "--style" monky-hg-style-log-graph)))
+(defun monky-refresh-log-buffer (revs)
+  (lexical-let ((revs revs))
+    (lambda ()
+      (monky-create-log-buffer-sections
+        (monky-hg-section 'commits "Commits:"
+                          #'monky-wash-logs
+                          "log"
+                          "--config" "extensions.graphlog="
+                          "-G"
+                          "--limit" (number-to-string monky-log-cutoff-length)
+                          "--style" monky-hg-style-log-graph
+                          (if revs "--rev" "")
+                          (if revs revs ""))))))
 
 (defun monky-next-sha1 (pos)
   "Return position of next sha1 after given position POS"
