@@ -2060,14 +2060,17 @@ PROPERTIES is the arguments for the function `propertize'."
                    (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
                    (unless (or (string= phase "") (string= phase "public"))
                      (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))))
-         (total-space-left (- width (length hg-info)))
+         (total-space-left (max 0 (- width (length hg-info))))
          (author-date-space-taken (+ 16 (min 10 (length author))))
-         (message-space-left (number-to-string (- total-space-left author-date-space-taken 1)))
+         (message-space-left (number-to-string (max 0 (- total-space-left author-date-space-taken 1))))
          (msg-format (concat "%-" message-space-left "." message-space-left "s"))
          (msg (format msg-format message)))
-    (let ((msg (if (>= (string-to-number message-space-left) (length message))
+    (let* ((shortened-msg (if (< 3 (length msg))
+                              (concat (substring msg 0 -3) "...")
+                            msg))
+           (msg (if (>= (string-to-number message-space-left) (length message))
                    msg
-                 (concat (substring msg 0 -3) "..."))))
+                  shortened-msg)))
       (concat
        hg-info
        (propertize msg 'face 'monky-log-message)
