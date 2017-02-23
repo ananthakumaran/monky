@@ -2079,7 +2079,8 @@ PROPERTIES is the arguments for the function `propertize'."
       (concat
        hg-info
        (propertize msg 'face 'monky-log-message)
-       (propertize (format " %.9s %9.9s" author date) 'face 'monky-log-author)))))
+       (propertize (format " %.10s" author) 'face 'monky-log-author)
+       (propertize (format " %.10s" date) 'face 'monky-log-date)))))
 
 (defun monky-log-current-branch ()
   (interactive)
@@ -2139,7 +2140,7 @@ Example:
             (bookmarks (match-string 5))
             (phase (match-string 6))
             (author (match-string 7))
-            (date (format-time-string "%b-%d-%y" (seconds-to-time (string-to-number (match-string 8)))))
+            (date (format-time-string "%Y-%m-%d" (seconds-to-time (string-to-number (match-string 8)))))
             (msg (match-string 9)))
         (monky-delete-line)
         (monky-with-section id 'commit
