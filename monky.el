@@ -231,6 +231,11 @@ Many Monky faces inherit from this one by default."
   "Face for phase label shown in log buffer."
   :group 'monky-faces)
 
+(defface monky-log-date
+  '((t :weight bold :inherit monky-header))
+  "Face for date in log."
+  :group 'monky-faces)
+
 (defface monky-queue-active
   '((((class color) (background light))
      :box t
@@ -2037,11 +2042,13 @@ PROPERTIES is the arguments for the function `propertize'."
                             (list (apply #'propertize l properties) " ")))
                         label-list))))
 
-(defun monky-present-log-line (graph id branches tags bookmarks phase message)
+(defun monky-present-log-line (graph id branches tags bookmarks phase date message)
   (concat
    (propertize (substring id 0 8) 'face 'monky-log-sha1)
    " "
    graph
+   (propertize date 'face 'monky-log-date)
+   " "
    (monky-propertize-labels branches 'face 'monky-log-head-label-local)
    (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
    (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
@@ -2067,7 +2074,8 @@ PROPERTIES is the arguments for the function `propertize'."
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
    "<phase>\\(.?*\\)</phase>"           ; 6. phase
-   "\\(.*\\)$"                          ; 7. msg
+   "<date>\\([0-9\-]\\{10\\}\\)</date>" ; 7. date
+   "\\(.*\\)$"                          ; 8. msg
    ))
 
 (defun monky-decode-xml-entities (str)
@@ -2096,7 +2104,8 @@ Example:
             (tags (match-string 4))
             (bookmarks (match-string 5))
             (phase (match-string 6))
-            (msg (match-string 7)))
+            (date (match-string 7))
+            (msg (match-string 8)))
         (monky-delete-line)
         (monky-with-section id 'commit
           (insert (monky-present-log-line
@@ -2105,6 +2114,7 @@ Example:
                    (monky-xml-items-to-list tags "tag")
                    (monky-xml-items-to-list bookmarks "bookmark")
                    (monky-decode-xml-entities phase)
+                   (monky-decode-xml-entities date)
                    (monky-decode-xml-entities msg)))
           (monky-set-section-info id)
           (when monky-log-count (incf monky-log-count))
