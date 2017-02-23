@@ -25,6 +25,7 @@
 ;;; Code:
 
 (require 'cl)
+(require 'cl-lib)
 (require 'bindat)
 
 (defgroup monky nil
@@ -148,7 +149,7 @@ Many Monky faces inherit from this one by default."
   '((((class color) (background light))
      :foreground "blue1")
     (((class color) (background dark))
-     :foreground "white"))
+     :foreground "green3"))
   "Face for lines in a diff that have been added."
   :group 'monky-faces)
 
@@ -161,7 +162,7 @@ Many Monky faces inherit from this one by default."
   '((((class color) (background light))
      :foreground "red")
     (((class color) (background dark))
-     :foreground "OrangeRed"))
+     :foreground "red"))
   "Face for lines in a diff that have been deleted."
   :group 'monky-faces)
 
@@ -176,6 +177,14 @@ Many Monky faces inherit from this one by default."
 (defface monky-log-message
   '((t))
   "Face for the message element of the log output."
+  :group 'monky-faces)
+
+(defface monky-log-author
+  '((((class color) (background light))
+     :foreground "navy")
+    (((class color) (background dark))
+     :foreground "cornflower blue"))
+  "Face for author shown in log buffer."
   :group 'monky-faces)
 
 (defface monky-log-head-label-local
@@ -274,6 +283,8 @@ Many Monky faces inherit from this one by default."
 
 (defvar monky-mode-hook nil
   "Hook run by `monky-mode'.")
+
+;;; User facing configuration
 
 (put 'monky-mode 'mode-class 'special)
 
@@ -615,7 +626,8 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "g") 'monky-refresh)
     (define-key map (kbd "$") 'monky-display-process)
     (define-key map (kbd ":") 'monky-hg-command)
-    (define-key map (kbd "l") 'monky-log)
+    (define-key map (kbd "l l") 'monky-log-current-branch)
+    (define-key map (kbd "l a") 'monky-log-all)
     (define-key map (kbd "b") 'monky-branches)
     (define-key map (kbd "Q") 'monky-queue)
     (define-key map (kbd "q") 'monky-quit-window)
@@ -629,6 +641,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "U") 'monky-unstage-all)
     (define-key map (kbd "a") 'monky-commit-amend)
     (define-key map (kbd "c") 'monky-log-edit)
+    (define-key map (kbd "y") 'monky-bookmark-create)
     (define-key map (kbd "C") 'monky-checkout)
     (define-key map (kbd "B") 'monky-backout)
     (define-key map (kbd "P") 'monky-push)
@@ -2042,40 +2055,60 @@ PROPERTIES is the arguments for the function `propertize'."
                             (list (apply #'propertize l properties) " ")))
                         label-list))))
 
-(defun monky-present-log-line (graph id branches tags bookmarks phase date message)
-  (concat
-   (propertize (substring id 0 8) 'face 'monky-log-sha1)
-   " "
-   graph
-   (propertize date 'face 'monky-log-date)
-   " "
-   (monky-propertize-labels branches 'face 'monky-log-head-label-local)
-   (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
-   (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
-   (unless (or (string= phase "") (string= phase "public"))
-     (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))
-   (propertize message 'face 'monky-log-message)))
+(defun monky-present-log-line (width graph id branches tags bookmarks phase author date message)
+  (let* ((hg-info (concat
+                   (propertize (substring id 0 8) 'face 'monky-log-sha1)
+                   " "
+                   graph
+                   (monky-propertize-labels branches 'face 'monky-log-head-label-local)
+                   (monky-propertize-labels tags 'face 'monky-log-head-label-tags)
+                   (monky-propertize-labels bookmarks 'face 'monky-log-head-label-bookmarks)
+                   (unless (or (string= phase "") (string= phase "public"))
+                     (monky-propertize-labels `(,phase) 'face 'monky-log-head-label-phase))))
+         (total-space-left (max 0 (- width (length hg-info))))
+         (author-date-space-taken (+ 16 (min 10 (length author))))
+         (message-space-left (number-to-string (max 0 (- total-space-left author-date-space-taken 1))))
+         (msg-format (concat "%-" message-space-left "." message-space-left "s"))
+         (msg (format msg-format message)))
+    (let* ((shortened-msg (if (< 3 (length msg))
+                              (concat (substring msg 0 -3) "...")
+                            msg))
+           (msg (if (>= (string-to-number message-space-left) (length message))
+                   msg
+                  shortened-msg)))
+      (concat
+       hg-info
+       (propertize msg 'face 'monky-log-message)
+       (propertize (format " %.9s %9.9s" author date) 'face 'monky-log-author)))))
 
-(defun monky-log ()
+(defun monky-log-current-branch ()
   (interactive)
+  (monky-log "ancestors(.)"))
+
+(defun monky-log-all ()
+  (interactive)
+  (monky-log nil))
+
+(defun monky-log (revs)
   (monky-with-process
     (let ((topdir (monky-get-root-dir)))
       (pop-to-buffer monky-log-buffer-name)
       (setq default-directory topdir
             monky-root-dir topdir)
-      (monky-mode-init topdir 'log #'monky-refresh-log-buffer)
+      (monky-mode-init topdir 'log (monky-refresh-log-buffer revs))
       (monky-log-mode t))))
 
 (defvar monky-log-graph-re
   (concat
-   "^\\([-\\/@o+|\s]+\s*\\) "           ; 1. graph
+   "^\\([-_\\/@o+|\s]+\s*\\) "          ; 1. graph
    "\\([a-z0-9]\\{40\\}\\) "            ; 2. id
    "<branches>\\(.?*\\)</branches>"     ; 3. branches
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
    "<phase>\\(.?*\\)</phase>"           ; 6. phase
-   "<date>\\([0-9\-]\\{10\\}\\)</date>" ; 7. date
-   "\\(.*\\)$"                          ; 8. msg
+   "<author>\\([A-z]+\\).?*</author>"   ; 7. author
+   "<monky-date>\\([0-9]+\\).?*</monky-date>" ; 8. date
+   "\\(.*\\)$"                          ; 9. msg
    ))
 
 (defun monky-decode-xml-entities (str)
@@ -2098,22 +2131,26 @@ Example:
 
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
-      (let ((graph (match-string 1))
+      (let ((width (window-total-width))
+            (graph (match-string 1))
             (id (match-string 2))
             (branches (match-string 3))
             (tags (match-string 4))
             (bookmarks (match-string 5))
             (phase (match-string 6))
-            (date (match-string 7))
-            (msg (match-string 8)))
+            (author (match-string 7))
+            (date (format-time-string "%b-%d-%y" (seconds-to-time (string-to-number (match-string 8)))))
+            (msg (match-string 9)))
         (monky-delete-line)
         (monky-with-section id 'commit
           (insert (monky-present-log-line
+                   width
                    graph id
                    (monky-xml-items-to-list branches "branch")
                    (monky-xml-items-to-list tags "tag")
                    (monky-xml-items-to-list bookmarks "bookmark")
                    (monky-decode-xml-entities phase)
+                   (monky-decode-xml-entities author)
                    (monky-decode-xml-entities date)
                    (monky-decode-xml-entities msg)))
           (monky-set-section-info id)
@@ -2164,15 +2201,19 @@ With a non numeric prefix ARG, show all entries"
    (t (setq monky-log-cutoff-length (* monky-log-cutoff-length 2))))
   (monky-refresh))
 
-(defun monky-refresh-log-buffer ()
-  (monky-create-log-buffer-sections
-    (monky-hg-section 'commits "Commits:"
-                      #'monky-wash-logs
-                      "log"
-                      "--config" "extensions.graphlog="
-                      "-G"
-                      "--limit" (number-to-string monky-log-cutoff-length)
-                      "--style" monky-hg-style-log-graph)))
+(defun monky-refresh-log-buffer (revs)
+  (lexical-let ((revs revs))
+    (lambda ()
+      (monky-create-log-buffer-sections
+        (monky-hg-section 'commits "Commits:"
+                          #'monky-wash-logs
+                          "log"
+                          "--config" "extensions.graphlog="
+                          "-G"
+                          "--limit" (number-to-string monky-log-cutoff-length)
+                          "--style" monky-hg-style-log-graph
+                          (if revs "--rev" "")
+                          (if revs revs ""))))))
 
 (defun monky-next-sha1 (pos)
   "Return position of next sha1 after given position POS"
@@ -2299,6 +2340,7 @@ With a non numeric prefix ARG, show all entries"
   (monky-create-buffer-sections
     (monky-hg-section nil nil
                       'monky-wash-commit
+                      "-v"
                       "log"
                       "--patch"
                       "--rev" commit)))
@@ -2910,6 +2952,19 @@ Brings up a buffer to allow editing of commit message."
      (list "log"
            "--template" "{desc}" "-r" ".")))
   (monky-pop-to-log-edit 'amend))
+
+(defun monky-bookmark-create (bookmark-name)
+  "Create a bookmark at the current location"
+  (interactive "sBookmark name: ")
+  (monky-run-hg-async "bookmark" bookmark-name))
+
+(defun monky-killall-monky-buffers ()
+  (interactive)
+  (cl-flet ((monky-buffer-p (b) (string-match "\*monky\\(:\\|-\\).*" (buffer-name b))))
+    (let ((monky-buffers (cl-remove-if-not #'monky-buffer-p (buffer-list))))
+      (cl-loop for mb in monky-buffers
+               do
+               (kill-buffer mb)))))
 
 (provide 'monky)
 
