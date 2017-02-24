@@ -1645,9 +1645,24 @@ before the last command."
 
 ;; TODO needs cleanup
 (defun monky-get-root-dir ()
+  (if (and (featurep 'tramp)
+	   (tramp-tramp-file-p default-directory))
+      (monky-get-tramp-root-dir)
+    (monky-get-local-root-dir)))
+
+(defun monky-get-local-root-dir ()
   (let ((root (monky-hg-string "root")))
     (if root
-        (concat root "/")
+	(concat root "/")
+      (error "Not inside a hg repo"))))
+
+(defun monky-get-tramp-root-dir ()
+  (let ((root (monky-hg-string "root"))
+	(tramp-path (tramp-dissect-file-name default-directory)))
+    (if root
+	(progn (aset tramp-path 3 root)
+	       (concat (apply 'tramp-make-tramp-file-name (append tramp-path ()))
+		       "/"))
       (error "Not inside a hg repo"))))
 
 (defun monky-find-buffer (submode &optional dir)
