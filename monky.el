@@ -27,6 +27,7 @@
 (require 'cl)
 (require 'cl-lib)
 (require 'bindat)
+(require 'ediff)
 
 (defgroup monky nil
   "Controlling Hg from Emacs."
@@ -641,12 +642,13 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "U") 'monky-unstage-all)
     (define-key map (kbd "a") 'monky-commit-amend)
     (define-key map (kbd "c") 'monky-log-edit)
+    (define-key map (kbd "e") 'monky-ediff-item)
     (define-key map (kbd "y") 'monky-bookmark-create)
     (define-key map (kbd "C") 'monky-checkout)
+    (define-key map (kbd "M") 'monky-merge)
     (define-key map (kbd "B") 'monky-backout)
     (define-key map (kbd "P") 'monky-push)
     (define-key map (kbd "f") 'monky-pull)
-    (define-key map (kbd "F") 'monky-fetch)
     (define-key map (kbd "k") 'monky-discard-item)
     (define-key map (kbd "m") 'monky-resolve-item)
     (define-key map (kbd "x") 'monky-unresolve-item)
@@ -659,6 +661,7 @@ FUNC should leave point at the end of the modified region"
   (let ((map (make-keymap)))
     (define-key map (kbd "e") 'monky-log-show-more-entries)
     (define-key map (kbd "C") 'monky-checkout-item)
+    (define-key map (kbd "M") 'monky-merge-item)
     (define-key map (kbd "B") 'monky-backout-item)
     (define-key map (kbd "i") 'monky-qimport-item)
     map))
@@ -670,6 +673,7 @@ FUNC should leave point at the end of the modified region"
 (defvar monky-branches-mode-map
   (let ((map (make-keymap)))
     (define-key map (kbd "C") 'monky-checkout-item)
+    (define-key map (kbd "M") 'monky-merge-item)
     map))
 
 (defvar monky-commit-mode-map
@@ -1165,6 +1169,11 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
                               monky-hg-standard-options)
                         args))))
 
+(defun monky-run-sync (&rest args)
+  (monky-run* (append (cons monky-hg-executable
+			    monky-hg-standard-options)
+		      args)))
+
 (defun monky-run-hg-async (&rest args)
   (message "Running %s %s"
            monky-hg-executable
@@ -1276,6 +1285,45 @@ With a prefix argument, visit in other window."
       ((queue)
        (monky-qqueue info)))))
 
+(defun monky-ediff-item ()
+  "Open the ediff merge editor on the item."
+  (interactive)
+  (monky-section-action (item info "ediff")
+    ((merged diff)
+     (if (eq (monky-diff-item-kind item) 'unresolved)
+	 (monky-ediff-merged item)
+       (error "Already resolved.  Unresolve first.")))
+    ((unmodified diff)
+     (error "Cannot ediff an unmodified file during a merge."))
+    ((staged diff)
+     (error "Already staged"))
+    ((changes diff)
+     (monky-ediff-changes item))
+    ))
+
+(defun monky-ediff-merged (item)
+  (let* ((file (monky-diff-item-file item))
+	 (file-path (concat (monky-get-root-dir) file)))
+    (condition-case nil
+	(monky-run-sync "resolve" "--tool" "internal:dump" file)
+      (error nil))
+    (condition-case nil
+	(ediff-merge-files-with-ancestor
+	 (concat file-path ".local")
+	 (concat file-path ".other")
+	 (concat file-path ".base")
+	 nil file)
+      (error nil))
+    (delete-file (concat file-path ".local"))
+    (delete-file (concat file-path ".other"))
+    (delete-file (concat file-path ".base"))
+    (delete-file (concat file-path ".orig"))))
+
+(defun monky-ediff-changes (item)
+  (ediff-revision
+   (concat (monky-get-root-dir)
+	   (monky-diff-item-file item))))
+
 (defun monky-stage-all ()
   "Add all items in Changes to the staging area."
   (interactive)
@@ -1327,22 +1375,14 @@ With a prefix argument, visit in other window."
 
 ;;; Updating
 
-(defun monky-fetch ()
-  "Run hg fetch."
-  (interactive)
-  (let ((remote (if current-prefix-arg
-                    (monky-read-remote "Fetch from : ")
-                  monky-incoming-repository)))
-    (monky-run-hg-async "fetch" remote
-                        "--config" "extensions.fetch=")))
-
 (defun monky-pull ()
   "Run hg pull."
   (interactive)
   (let ((remote (if current-prefix-arg
                     (monky-read-remote "Pull from : ")
                   monky-incoming-repository)))
-    (monky-run-hg-async "pull" remote)))
+    (monky-run-hg-sync "pull" remote)
+    (monky-run-hg "update" "--tool" "internal:merge")))
 
 (defun monky-remotes ()
   (mapcar #'car (monky-hg-config-section "paths")))
@@ -1365,11 +1405,17 @@ With a prefix argument, visit in other window."
                      (monky-read-remote
                       (format "Push branch %s to : " branch))
                    monky-outgoing-repository)))
-    (monky-run-hg-async "push" "--branch" branch remote)))
+    (if (eq remote "")
+	(monky-run-hg-async "push" "--branch" branch)
+      (monky-run-hg-async "push" "--branch" branch remote))))
 
 (defun monky-checkout (node)
   (interactive (list (monky-read-revision "Update to : ")))
-  (monky-run-hg "update" node))
+  (monky-run-hg "update" node "--tool" "internal:merge"))
+
+(defun monky-merge (node)
+  (interactive (list (monky-read-revision "Update to : ")))
+  (monky-run-hg "merge" node "--tool" "internal:merge"))
 
 (defun monky-reset-tip ()
   (interactive)
@@ -1437,8 +1483,15 @@ With a prefix argument, visit in other window."
 ;;; Miscellaneous
 
 (defun monky-revert-file (file)
-  (when (or (not monky-revert-item-confirm) (yes-or-no-p (format "Revert %s? " file)))
-    (monky-run-hg "revert" "--no-backup" file)))
+  (when (or (not monky-revert-item-confirm)
+	    (yes-or-no-p (format "Revert %s? " file)))
+    (monky-run-hg "revert" "--no-backup" file)
+    (let ((file-buf (find-buffer-visiting
+		     (concat (monky-get-root-dir) file))))
+      (if file-buf
+	  (save-current-buffer
+	    (set-buffer file-buf)
+	    (revert-buffer t t t))))))
 
 (defun monky-discard-item ()
   "Delete the file if not tracked, otherwise revert it."
@@ -1835,30 +1888,34 @@ before the last command."
         (t
          nil)))
 
-(defun monky-wash-diff-section (&optional status)
-  (if (looking-at "^diff")
-      (let* ((file (monky-diff-line-file))
-             (end (save-excursion
-                    (forward-line)
-                    (if (search-forward-regexp "^diff\\|^@@" nil t)
-                        (goto-char (match-beginning 0))
-                      (goto-char (point-max)))
-                    (point-marker)))
-             (status (or status
-                         (cond
-                          ((save-excursion
-                             (search-forward-regexp "^--- /dev/null" end t))
-                           'new)
-                          ((save-excursion
-                             (search-forward-regexp "^+++ /dev/null" end t))
-                           'removed)
-                          (t 'modified)))))
-        (monky-set-section-info (list status file))
-        (monky-insert-diff-title status file)
-        (goto-char end)
-        (let ((monky-section-hidden-default nil))
-          (monky-wash-sequence #'monky-wash-hunk)))
-    nil))
+(defun monky-wash-diff-section (&optional status file)
+  (cond ((looking-at "^diff")
+	 (let* ((file (monky-diff-line-file))
+		(end (save-excursion
+		       (forward-line)
+		       (if (search-forward-regexp "^diff\\|^@@" nil t)
+			   (goto-char (match-beginning 0))
+			 (goto-char (point-max)))
+		       (point-marker)))
+		(status (or status
+			    (cond
+			     ((save-excursion
+				(search-forward-regexp "^--- /dev/null" end t))
+			      'new)
+			     ((save-excursion
+				(search-forward-regexp "^+++ /dev/null" end t))
+			      'removed)
+			     (t 'modified)))))
+	   (monky-set-section-info (list status file))
+	   (monky-insert-diff-title status file)
+	   (goto-char end)
+	   (let ((monky-section-hidden-default nil))
+	     (monky-wash-sequence #'monky-wash-hunk))))
+	;; sometimes diff returns empty output
+	((and status file)
+	 (monky-set-section-info (list status file))
+	 (monky-insert-diff-title status file))
+	(t nil)))
 
 (defun monky-wash-diff ()
   (let ((monky-section-hidden-default monky-hide-diffs))
@@ -1876,7 +1933,7 @@ before the last command."
     (save-restriction
       (narrow-to-region p (point))
       (goto-char p)
-      (monky-wash-diff-section status)
+      (monky-wash-diff-section status file)
       (goto-char (point-max)))))
 
 (defun monky-insert-diff-title (status file)
@@ -2436,6 +2493,15 @@ With a non numeric prefix ARG, show all entries"
      (monky-checkout info))
     ((log commits commit)
      (monky-checkout info))))
+
+(defun monky-merge-item ()
+  "Checkout the revision represented by current item."
+  (interactive)
+  (monky-section-action (item info "merge")
+    ((branch)
+     (monky-merge info))
+    ((log commits commit)
+     (monky-merge info))))
 
 ;;; Queue mode
 (define-minor-mode monky-queue-mode
