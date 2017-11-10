@@ -1226,6 +1226,9 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
                         args))))
 
 (defun monky-run-hg-sync (&rest args)
+    (message "Running %s %s"
+           monky-hg-executable
+           (mapconcat #'identity args " "))
   (monky-run* (append (cons monky-hg-executable
 			    monky-hg-standard-options)
 		      args)))
