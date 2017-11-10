@@ -113,6 +113,62 @@ is usually faster if Monky runs several commands."
   :type '(choice (const :tag "Single processes" :value nil)
                  (const :tag "Use command server" :value cmdserver)))
 
+(defcustom monky-run-update-after-pull nil
+  "Run update after pulling."
+  :group 'monky
+  :type 'boolean)
+
+(defcustom monky-repository-paths nil
+  "*Paths where to find repositories.  For each repository an alias is defined, which can then be passed to `monky-open-repository` to open the repository.
+
+Lisp-type of this option: The value must be a list L whereas each
+element of L is a 2-element list: The first element is the full
+path of a directory \(string) and the second element is an
+arbitrary alias \(string) for this directory which is then
+displayed instead of the underlying directory."
+  :group 'monky
+  :initialize 'custom-initialize-default
+  :set (function (lambda (symbol value)
+                   (set symbol value)
+                   (if (and (boundp 'ecb-minor-mode)
+                            ecb-minor-mode
+			    (functionp 'ecb-update-directories-buffer))
+		       (ecb-update-directories-buffer))))
+  :type '(repeat (cons :tag "Path with alias"
+		       (string :tag "Alias")
+		       (directory :tag "Path"))))
+
+(defun monky-root-dir-descr (dir)
+  "Return the name of dir if it matches a path in monky-repository-paths, otherwise return nil"
+  (catch 'exit
+    (dolist (root-dir monky-repository-paths)
+      (let ((base-dir
+	     (concat
+	      (replace-regexp-in-string
+	       "/$" ""
+	       (replace-regexp-in-string
+		"^\~" (getenv "HOME")
+		(cdr root-dir)))
+	      "/")))
+	(when (equal base-dir dir)
+	  (throw 'exit (cons (car root-dir)
+			     base-dir)))))))
+
+(defun monky-open-repository ()
+  "Prompt for a repository path or alias, then display the status
+buffer.  Aliases are set in monky-repository-paths."
+  (interactive)
+  (let* ((rootdir (condition-case nil
+		      (monky-get-root-dir)
+		    (error nil)))
+	 (default-repo (or (monky-root-dir-descr rootdir) rootdir))
+	 (msg (if default-repo
+		  (concat "repository (default " (car default-repo) "): ")
+		"repository: "))
+	 (repo-name (completing-read msg (mapcar 'car monky-repository-paths)))
+	 (repo (or (assoc repo-name monky-repository-paths) default-repo)))
+    (when repo (monky-status (cdr repo)))))
+
 (defgroup monky-faces nil
   "Customize the appearance of Monky"
   :prefix "monky-"
@@ -1169,7 +1225,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
                               monky-hg-standard-options)
                         args))))
 
-(defun monky-run-sync (&rest args)
+(defun monky-run-hg-sync (&rest args)
   (monky-run* (append (cons monky-hg-executable
 			    monky-hg-standard-options)
 		      args)))
@@ -1283,7 +1339,9 @@ With a prefix argument, visit in other window."
       ((longer)
        (monky-log-show-more-entries))
       ((queue)
-       (monky-qqueue info)))))
+       (monky-qqueue info))
+      ((branch)
+       (monky-checkout info)))))
 
 (defun monky-ediff-item ()
   "Open the ediff merge editor on the item."
@@ -1305,7 +1363,7 @@ With a prefix argument, visit in other window."
   (let* ((file (monky-diff-item-file item))
 	 (file-path (concat (monky-get-root-dir) file)))
     (condition-case nil
-	(monky-run-sync "resolve" "--tool" "internal:dump" file)
+	(monky-run-hg-sync "resolve" "--tool" "internal:dump" file)
       (error nil))
     (condition-case nil
 	(ediff-merge-files-with-ancestor
@@ -1376,13 +1434,15 @@ With a prefix argument, visit in other window."
 ;;; Updating
 
 (defun monky-pull ()
-  "Run hg pull."
+  "Run hg pull.  If monky-run-update-after-pull is t, also run hg update."
   (interactive)
   (let ((remote (if current-prefix-arg
                     (monky-read-remote "Pull from : ")
                   monky-incoming-repository)))
-    (monky-run-hg-sync "pull" remote)
-    (monky-run-hg "update" "--tool" "internal:merge")))
+    (cond (monky-run-update-after-pull
+	   (monky-run-hg-sync "pull" remote)
+	   (monky-run-hg-async "update" "--tool" "internal:merge"))
+	  (t (monky-run-hg-async "pull" remote)))))
 
 (defun monky-remotes ()
   (mapcar #'car (monky-hg-config-section "paths")))
@@ -1410,11 +1470,11 @@ With a prefix argument, visit in other window."
       (monky-run-hg-async "push" "--branch" branch remote))))
 
 (defun monky-checkout (node)
-  (interactive (list (monky-read-revision "Update to : ")))
+  (interactive (list (monky-read-revision "Update to: ")))
   (monky-run-hg "update" node "--tool" "internal:merge"))
 
 (defun monky-merge (node)
-  (interactive (list (monky-read-revision "Update to : ")))
+  (interactive (list (monky-read-revision "Merge with: ")))
   (monky-run-hg "merge" node "--tool" "internal:merge"))
 
 (defun monky-reset-tip ()
