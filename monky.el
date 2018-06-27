@@ -1607,9 +1607,7 @@ before the last command."
   "Create a temporary file name, evaluate BODY and delete the file."
   (declare (indent 1)
            (debug (symbolp body)))
-  `(let ((,file (expand-file-name
-                 (make-temp-name "monky-temp-file")
-                 temporary-file-directory)))
+  `(let ((,file (make-temp-file "monky-temp-file")))
      (unwind-protect
          (progn ,@body)
        (delete-file ,file))))
