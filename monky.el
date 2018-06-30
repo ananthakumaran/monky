@@ -1468,8 +1468,8 @@ With a prefix argument, visit in other window."
                      (monky-read-remote
                       (format "Push branch %s to : " branch))
                    monky-outgoing-repository)))
-    (if (eq remote "")
-	(monky-run-hg-async "push" "--branch" branch)
+    (if (string= "" remote)
+        (monky-run-hg-async "push" "--branch" branch)
       (monky-run-hg-async "push" "--branch" branch remote))))
 
 (defun monky-checkout (node)
