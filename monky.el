@@ -118,6 +118,11 @@ is usually faster if Monky runs several commands."
   :group 'monky
   :type 'boolean)
 
+(defcustom monky-run-rebase-after-pull nil
+  "Run rebase after pulling."
+  :group 'monky
+  :type 'boolean)
+
 (defcustom monky-repository-paths nil
   "*Paths where to find repositories.  For each repository an alias is defined, which can then be passed to `monky-open-repository` to open the repository.
 
@@ -1445,6 +1450,9 @@ With a prefix argument, visit in other window."
     (cond (monky-run-update-after-pull
 	   (monky-run-hg-sync "pull" remote)
 	   (monky-run-hg-async "update" "--tool" "internal:merge"))
+	  (monky-run-rebase-after-pull
+	   (monky-run-hg-sync "pull" remote)
+	   (monky-run-hg-async "rebase" "--tool" "internal:merge"))
 	  (t (monky-run-hg-async "pull" remote)))))
 
 (defun monky-remotes ()
