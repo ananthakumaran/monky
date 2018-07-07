@@ -113,15 +113,10 @@ is usually faster if Monky runs several commands."
   :type '(choice (const :tag "Single processes" :value nil)
                  (const :tag "Use command server" :value cmdserver)))
 
-(defcustom monky-run-update-after-pull nil
-  "Run update after pulling."
+(defcustom monky-pull-args ""
+  "Extra args to pass to pull."
   :group 'monky
-  :type 'boolean)
-
-(defcustom monky-run-rebase-after-pull nil
-  "Run rebase after pulling."
-  :group 'monky
-  :type 'boolean)
+  :type 'string)
 
 (defcustom monky-repository-paths nil
   "*Paths where to find repositories.  For each repository an alias is defined, which can then be passed to `monky-open-repository` to open the repository.
@@ -1447,13 +1442,7 @@ With a prefix argument, visit in other window."
   (let ((remote (if current-prefix-arg
                     (monky-read-remote "Pull from : ")
                   monky-incoming-repository)))
-    (cond (monky-run-update-after-pull
-	   (monky-run-hg-sync "pull" remote)
-	   (monky-run-hg-async "update" "--tool" "internal:merge"))
-	  (monky-run-rebase-after-pull
-	   (monky-run-hg-sync "pull" remote)
-	   (monky-run-hg-async "rebase" "--tool" "internal:merge"))
-	  (t (monky-run-hg-async "pull" remote)))))
+    (monky-run-hg-async "pull" monky-pull-args remote)))
 
 (defun monky-remotes ()
   (mapcar #'car (monky-hg-config-section "paths")))
