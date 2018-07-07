@@ -2566,7 +2566,7 @@ With a non numeric prefix ARG, show all entries"
      (monky-checkout info))))
 
 (defun monky-merge-item ()
-  "Checkout the revision represented by current item."
+  "Merge the revision represented by current item."
   (interactive)
   (monky-section-action (item info "merge")
     ((branch)
