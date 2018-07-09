@@ -1443,7 +1443,7 @@ With a prefix argument, visit in other window."
                     (monky-read-remote "Pull from : ")
                   monky-incoming-repository)))
     (apply #'monky-run-hg-async
-	   "pull" (append monky-pull-args '(remote)))))
+	   "pull" (append monky-pull-args (list remote)))))
 
 (defun monky-remotes ()
   (mapcar #'car (monky-hg-config-section "paths")))
