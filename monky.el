@@ -39,7 +39,7 @@
   :group 'monky
   :type 'string)
 
-(defcustom monky-hg-standard-options '("--config" "diff.git=Off")
+(defcustom monky-hg-standard-options '("--config" "diff.git=Off" "--config" "ui.merge=:merge")
   "Standard options when running Hg."
   :group 'monky
   :type '(repeat string))
@@ -113,7 +113,7 @@ is usually faster if Monky runs several commands."
   :type '(choice (const :tag "Single processes" :value nil)
                  (const :tag "Use command server" :value cmdserver)))
 
-(defcustom monky-pull-args ("--config" "ui.merge=:merge")
+(defcustom monky-pull-args ()
   "Extra args to pass to pull."
   :group 'monky
   :type '(repeat string))
