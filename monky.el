@@ -113,7 +113,7 @@ is usually faster if Monky runs several commands."
   :type '(choice (const :tag "Single processes" :value nil)
                  (const :tag "Use command server" :value cmdserver)))
 
-(defcustom monky-pull-args ()
+(defcustom monky-pull-args ("--config" "ui.merge=:merge")
   "Extra args to pass to pull."
   :group 'monky
   :type '(repeat string))
