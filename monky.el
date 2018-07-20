@@ -1472,11 +1472,11 @@ With a prefix argument, visit in other window."
 
 (defun monky-checkout (node)
   (interactive (list (monky-read-revision "Update to: ")))
-  (monky-run-hg "update" node "--tool" "internal:merge"))
+  (monky-run-hg "update" node))
 
 (defun monky-merge (node)
   (interactive (list (monky-read-revision "Merge with: ")))
-  (monky-run-hg "merge" node "--tool" "internal:merge"))
+  (monky-run-hg "merge" node))
 
 (defun monky-reset-tip ()
   (interactive)
