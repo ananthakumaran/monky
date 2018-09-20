@@ -1249,7 +1249,7 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
   "Display output from most recent hg command."
   (interactive)
   (unless (get-buffer monky-process-buffer-name)
-    (error "No Hg commands have run"))
+    (user-error "No Hg commands have run"))
   (display-buffer monky-process-buffer-name))
 
 (defun monky-hg-command (command)
@@ -1353,11 +1353,11 @@ With a prefix argument, visit in other window."
     ((merged diff)
      (if (eq (monky-diff-item-kind item) 'unresolved)
 	 (monky-ediff-merged item)
-       (error "Already resolved.  Unresolve first.")))
+       (user-error "Already resolved.  Unresolve first.")))
     ((unmodified diff)
-     (error "Cannot ediff an unmodified file during a merge."))
+     (user-error "Cannot ediff an unmodified file during a merge."))
     ((staged diff)
-     (error "Already staged"))
+     (user-error "Already staged"))
     ((changes diff)
      (monky-ediff-changes item))
     ))
@@ -1408,11 +1408,11 @@ With a prefix argument, visit in other window."
     ((changes)
      (monky-stage-all))
     ((staged diff)
-     (error "Already staged"))
+     (user-error "Already staged"))
     ((unmodified diff)
-     (error "Cannot partially commit a merge"))
+     (user-error "Cannot partially commit a merge"))
     ((merged diff)
-     (error "Cannot partially commit a merge"))))
+     (user-error "Cannot partially commit a merge"))))
 
 (defun monky-unstage-all ()
   "Remove all items from the staging area"
@@ -1432,7 +1432,7 @@ With a prefix argument, visit in other window."
       ((staged)
        (monky-unstage-all))
       ((changes diff)
-       (error "Already unstaged")))))
+       (user-error "Already unstaged")))))
 
 ;;; Updating
 
@@ -1500,7 +1500,7 @@ With a prefix argument, visit in other window."
     ((merged diff)
      (if (eq (monky-diff-item-kind item) 'resolved)
          (monky-run-hg "resolve" "--unmark" (monky-diff-item-file item))
-       (error "Already unresolved")))))
+       (user-error "Already unresolved")))))
 
 (defun monky-resolve-item ()
   "Mark the item at point as resolved."
@@ -1509,7 +1509,7 @@ With a prefix argument, visit in other window."
     ((merged diff)
      (if (eq (monky-diff-item-kind item) 'unresolved)
          (monky-run-hg "resolve" "--mark" (monky-diff-item-file item))
-       (error "Already resolved")))))
+       (user-error "Already resolved")))))
 
 ;; History
 
@@ -1766,7 +1766,7 @@ before the last command."
   (let ((root (monky-hg-string "root")))
     (if root
 	(concat root "/")
-      (error "Not inside a hg repo"))))
+      (user-error "Not inside a hg repo"))))
 
 (defun monky-get-tramp-root-dir ()
   (let ((root (monky-hg-string "root"))
@@ -1775,7 +1775,7 @@ before the last command."
 	(progn (aset tramp-path 3 root)
 	       (concat (apply 'tramp-make-tramp-file-name (append tramp-path ()))
 		       "/"))
-      (error "Not inside a hg repo"))))
+      (user-error "Not inside a hg repo"))))
 
 (defun monky-find-buffer (submode &optional dir)
   (let ((rootdir (expand-file-name (or dir (monky-get-root-dir)))))
@@ -3002,7 +3002,7 @@ With a non numeric prefix ARG, show all entries"
   "Finish edit and commit."
   (interactive)
   (when (= (buffer-size) 0)
-    (error "No %s message" monky-log-edit-operation))
+    (user-error "No %s message" monky-log-edit-operation))
   (let ((commit-buf (current-buffer)))
     (case monky-log-edit-operation
       ('commit
@@ -3080,7 +3080,7 @@ With a non numeric prefix ARG, show all entries"
   "Bring up a buffer to allow editing of commit messages."
   (interactive)
   (if (not (or monky-staged-files (monky-merge-p)))
-      (error "Nothing staged")
+      (user-error "Nothing staged")
     (monky-pop-to-log-edit 'commit)))
 
 (defun monky-commit-amend ()
