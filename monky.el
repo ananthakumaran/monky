@@ -1815,7 +1815,8 @@ before the last command."
                     (equal section (caar item)))
                   (monky-hg-config))))
 
-(defvar monky-el-directory (file-name-directory load-file-name)
+(defvar monky-el-directory
+  (file-name-directory (or load-file-name default-directory))
   "The parent directory of monky.el")
 
 (defun monky-get-style-path (filename)
