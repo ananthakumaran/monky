@@ -2371,8 +2371,6 @@ With a non numeric prefix ARG, show all entries"
   :lighter ()
   :keymap monky-blame-mode-map)
 
-(defvar monky-blame-buffer-name "*monky-blame*")
-
 (defun monky-present-blame-line (author changeset text)
   (concat author
 	  " "
@@ -2417,7 +2415,9 @@ With a non numeric prefix ARG, show all entries"
   (monky-with-process
     (let ((file-name (buffer-file-name))
 	  (topdir (monky-get-root-dir)))
-      (pop-to-buffer monky-blame-buffer-name)
+      (pop-to-buffer
+       (format "*monky-blame: %s*"
+               (file-name-nondirectory buffer-file-name)))
       (monky-mode-init topdir 'blame #'monky-refresh-blame-buffer file-name)
       (monky-blame-mode t))))
 
