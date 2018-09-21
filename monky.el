@@ -474,9 +474,6 @@ refreshes buffers."
               (monky-cmdserver-parse-hello (monky-cmdserver-read)))
         monky-cmd-process))))
 
-(defun monky-cmdserver-stop (proc)
-  (delete-process proc))
-
 (defun monky-cmdserver-parse-hello (hello-message)
   "Parse hello message to get encoding information."
   (let ((channel (car hello-message))
@@ -1029,11 +1026,6 @@ CMD is an external command that will be run with ARGS as arguments"
          washer
          monky-hg-executable
          (append monky-hg-standard-options args)))
-
-(defun monky-set-section-needs-refresh-on-show (flag &optional section)
-  (setf (monky-section-needs-refresh-on-show
-         (or section monky-top-section))
-        flag))
 
 (defun monky-section-set-hidden (section hidden)
   "Hide SECTION if HIDDEN is not nil, show it otherwise."
@@ -1826,19 +1818,11 @@ before the last command."
 (defvar monky-hg-style-log-graph
   (monky-get-style-path "log-graph"))
 
-(defvar monky-hg-style-files
-  (monky-get-style-path "files"))
-
 (defvar monky-hg-style-files-status
   (monky-get-style-path "files-status"))
 
 (defvar monky-hg-style-tags
   (monky-get-style-path "tags"))
-
-(defun monky-hg-log-files (revision &rest args)
-  (apply #'monky-hg-lines "log"
-         "--style" monky-hg-style-files
-         "--rev" revision args))
 
 (defun monky-hg-log-tags (revision &rest args)
   (apply #'monky-hg-lines "log"
@@ -2980,9 +2964,6 @@ With a non numeric prefix ARG, show all entries"
      (monky-qfinish info))))
 
 ;;; Log edit mode
-
-(defvar monky-log-edit-mode-hook nil
-  "Hook run by `monky-log-edit-mode'.")
 
 (defvar monky-log-edit-buffer-name "*monky-edit-log*"
   "Buffer name for composing commit messages.")
