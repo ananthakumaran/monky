@@ -669,6 +669,10 @@ FUNC should leave point at the end of the modified region"
     (goto-char 1)
     (forward-line (1- line))))
 
+(defun monky-status-help ()
+  (interactive)
+  (describe-function #'monky-status-mode))
+
 ;;; Key bindings
 
 (defvar monky-mode-map
@@ -711,6 +715,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "X") 'monky-reset-tip)
     (define-key map (kbd "A") 'monky-addremove-all)
     (define-key map (kbd "L") 'monky-rollback)
+    (define-key map (kbd "?") 'monky-status-help)
     map))
 
 (defvar monky-log-mode-map
