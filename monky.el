@@ -176,14 +176,15 @@ buffer.  Aliases are set in monky-repository-paths."
   :group 'monky)
 
 (defface monky-header
-  '((t))
+  '((t :weight bold))
   "Face for generic header lines.
 
 Many Monky faces inherit from this one by default."
   :group 'monky-faces)
 
 (defface monky-section-title
-  '((t :weight bold :inherit monky-header))
+  '((((class color) (background light)) :foreground "DarkGoldenrod4" :inherit monky-header)
+    (((class color) (background  dark)) :foreground "LightGoldenrod2" :inherit monky-header))
   "Face for section titles."
   :group 'monky-faces)
 
@@ -193,7 +194,7 @@ Many Monky faces inherit from this one by default."
   :group 'monky-faces)
 
 (defface monky-diff-title
-  '((t :inherit (monky-header highlight)))
+  '((t :inherit (monky-header)))
   "Face for diff title lines."
   :group 'monky-faces)
 
@@ -204,9 +205,11 @@ Many Monky faces inherit from this one by default."
 
 (defface monky-diff-add
   '((((class color) (background light))
-     :foreground "blue1")
+     :background "#cceecc"
+     :foreground "#22aa22")
     (((class color) (background dark))
-     :foreground "green3"))
+     :background "#336633"
+     :foreground "#cceecc"))
   "Face for lines in a diff that have been added."
   :group 'monky-faces)
 
@@ -217,9 +220,11 @@ Many Monky faces inherit from this one by default."
 
 (defface monky-diff-del
   '((((class color) (background light))
-     :foreground "red")
+     :background "#eecccc"
+     :foreground "#aa2222")
     (((class color) (background dark))
-     :foreground "red"))
+     :background "#663333"
+     :foreground "#eecccc"))
   "Face for lines in a diff that have been deleted."
   :group 'monky-faces)
 
