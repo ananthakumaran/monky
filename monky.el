@@ -1954,33 +1954,34 @@ before the last command."
          nil)))
 
 (defun monky-wash-diff-section (&optional status file)
-  (cond ((looking-at "^diff")
-	 (let* ((file (monky-diff-line-file))
-		(end (save-excursion
-		       (forward-line)
-		       (if (search-forward-regexp "^diff\\|^@@" nil t)
-			   (goto-char (match-beginning 0))
-			 (goto-char (point-max)))
-		       (point-marker)))
-		(status (or status
-			    (cond
-			     ((save-excursion
-				(search-forward-regexp "^--- /dev/null" end t))
-			      'new)
-			     ((save-excursion
-				(search-forward-regexp "^+++ /dev/null" end t))
-			      'removed)
-			     (t 'modified)))))
-	   (monky-set-section-info (list status file))
-	   (monky-insert-diff-title status file)
-	   (goto-char end)
-	   (let ((monky-section-hidden-default nil))
-	     (monky-wash-sequence #'monky-wash-hunk))))
-	;; sometimes diff returns empty output
-	((and status file)
-	 (monky-set-section-info (list status file))
-	 (monky-insert-diff-title status file))
-	(t nil)))
+  (let ((case-fold-search nil))
+   (cond ((looking-at "^diff ")
+	  (let* ((file (monky-diff-line-file))
+		 (end (save-excursion
+		        (forward-line)
+		        (if (search-forward-regexp "^diff \\|^@@" nil t)
+			    (goto-char (match-beginning 0))
+			  (goto-char (point-max)))
+		        (point-marker)))
+		 (status (or status
+			     (cond
+			      ((save-excursion
+				 (search-forward-regexp "^--- /dev/null" end t))
+			       'new)
+			      ((save-excursion
+				 (search-forward-regexp "^+++ /dev/null" end t))
+			       'removed)
+			      (t 'modified)))))
+	    (monky-set-section-info (list status file))
+	    (monky-insert-diff-title status file)
+	    (goto-char end)
+	    (let ((monky-section-hidden-default nil))
+	      (monky-wash-sequence #'monky-wash-hunk))))
+	 ;; sometimes diff returns empty output
+	 ((and status file)
+	  (monky-set-section-info (list status file))
+	  (monky-insert-diff-title status file))
+	 (t nil))))
 
 (defun monky-wash-diff ()
   (let ((monky-section-hidden-default monky-hide-diffs))
@@ -2484,10 +2485,11 @@ With a non numeric prefix ARG, show all entries"
                       "--rev" commit)))
 
 (defun monky-wash-commit ()
-  (while (and (not (eobp)) (not (looking-at "^diff")) )
-    (forward-line))
-  (when (looking-at "^diff")
-    (monky-wash-diffs)))
+  (let ((case-fold-search nil))
+   (while (and (not (eobp)) (not (looking-at "^diff ")) )
+     (forward-line))
+   (when (looking-at "^diff ")
+     (monky-wash-diffs))))
 
 ;;; Branch mode
 (define-minor-mode monky-branches-mode
