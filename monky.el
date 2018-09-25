@@ -28,6 +28,8 @@
 (require 'cl-lib)
 (require 'bindat)
 (require 'ediff)
+(require 'view)
+(require 'tramp)
 
 (defgroup monky nil
   "Controlling Hg from Emacs."
@@ -479,9 +481,6 @@ refreshes buffers."
               (monky-cmdserver-parse-hello (monky-cmdserver-read)))
         monky-cmd-process))))
 
-(defun monky-cmdserver-stop (proc)
-  (delete-process proc))
-
 (defun monky-cmdserver-parse-hello (hello-message)
   "Parse hello message to get encoding information."
   (let ((channel (car hello-message))
@@ -759,6 +758,11 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "A") 'monky-addremove-all)
     map))
 
+(defvar monky-pre-log-edit-window-configuration nil)
+(defvar monky-log-edit-client-buffer nil)
+(defvar monky-log-edit-operation nil)
+(defvar monky-log-edit-info nil)
+
 (defvar monky-log-edit-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map (kbd "C-c C-c") 'monky-log-edit-commit)
@@ -959,6 +963,10 @@ CMD is an external command that will be run with ARGS as arguments"
           (or next
               (monky-next-section parent))))))
 
+(monky-def-permanent-buffer-local monky-submode)
+(monky-def-permanent-buffer-local monky-refresh-function)
+(monky-def-permanent-buffer-local monky-refresh-args)
+
 (defun monky-goto-next-section ()
   "Go to the next monky section."
   (interactive)
@@ -1034,11 +1042,6 @@ CMD is an external command that will be run with ARGS as arguments"
          washer
          monky-hg-executable
          (append monky-hg-standard-options args)))
-
-(defun monky-set-section-needs-refresh-on-show (flag &optional section)
-  (setf (monky-section-needs-refresh-on-show
-         (or section monky-top-section))
-        flag))
 
 (defun monky-section-set-hidden (section hidden)
   "Hide SECTION if HIDDEN is not nil, show it otherwise."
@@ -1390,6 +1393,10 @@ With a prefix argument, visit in other window."
    (concat (monky-get-root-dir)
 	   (monky-diff-item-file item))))
 
+(defvar monky-staged-all-files nil)
+(defvar monky-old-staged-files '())
+(monky-def-permanent-buffer-local monky-staged-files)
+
 (defun monky-stage-all ()
   "Add all items in Changes to the staging area."
   (interactive)
@@ -1689,10 +1696,6 @@ before the last command."
 
 ;;; Monky mode
 
-(monky-def-permanent-buffer-local monky-submode)
-(monky-def-permanent-buffer-local monky-refresh-function)
-(monky-def-permanent-buffer-local monky-refresh-args)
-
 (defun monky-mode ()
   "View the status of a Hg Repository.
 
@@ -1831,19 +1834,11 @@ before the last command."
 (defvar monky-hg-style-log-graph
   (monky-get-style-path "log-graph"))
 
-(defvar monky-hg-style-files
-  (monky-get-style-path "files"))
-
 (defvar monky-hg-style-files-status
   (monky-get-style-path "files-status"))
 
 (defvar monky-hg-style-tags
   (monky-get-style-path "tags"))
-
-(defun monky-hg-log-files (revision &rest args)
-  (apply #'monky-hg-lines "log"
-         "--style" monky-hg-style-files
-         "--rev" revision args))
 
 (defun monky-hg-log-tags (revision &rest args)
   (apply #'monky-hg-lines "log"
@@ -2041,10 +2036,6 @@ before the last command."
                       "status" "--modified" "--added" "--removed")))
 
 ;; Staged Changes
-
-(defvar monky-staged-all-files nil)
-(defvar monky-old-staged-files '())
-(monky-def-permanent-buffer-local monky-staged-files)
 
 (defun monky-stage-file (file)
   (if (not (member file monky-staged-files))
@@ -2268,6 +2259,9 @@ Example:
                          (format "^<%s>\\|</%s>$" tag tag) "" xml-like)
                         (format "</%s><%s>" tag tag))))
 
+(defvar monky-log-count ()
+  "Internal var used to count the number of logs actually added in a buffer.")
+
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
       (let ((width (window-total-width))
@@ -2305,9 +2299,6 @@ Example:
 (defun monky-wash-logs ()
   (let ((monky-old-top-section nil))
     (monky-wash-sequence #'monky-wash-log-line)))
-
-(defvar monky-log-count ()
-  "Internal var used to count the number of logs actually added in a buffer.")
 
 (defmacro monky-create-log-buffer-sections (&rest body)
   "Empty current buffer of text and monky's section, and then evaluate BODY.
@@ -2624,6 +2615,10 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-wash-queue-patch ()
   (monky-wash-queue-insert-patch #'insert-file-contents))
 
+(defvar monky-queue-staged-all-files nil)
+(monky-def-permanent-buffer-local monky-queue-staged-files)
+(monky-def-permanent-buffer-local monky-queue-old-staged-files)
+
 (defun monky-wash-queue-discarding ()
   (monky-wash-sequence
    (monky-with-wash-status status file
@@ -2742,10 +2737,6 @@ With a non numeric prefix ARG, show all entries"
 
 ;;; Queue Staged Changes
 
-(defvar monky-queue-staged-all-files nil)
-(monky-def-permanent-buffer-local monky-queue-staged-files)
-(monky-def-permanent-buffer-local monky-queue-old-staged-files)
-
 (defun monky-queue-stage-file (file)
   (add-to-list 'monky-queue-staged-files file))
 
@@ -2803,6 +2794,9 @@ With a non numeric prefix ARG, show all entries"
   (interactive)
   (monky-run-hg "qpop" "--all"
                 "--config" "extensions.mq="))
+
+(defvar monky-log-edit-buffer-name "*monky-edit-log*"
+  "Buffer name for composing commit messages.")
 
 (defun monky-qrefresh ()
   (interactive)
@@ -2988,18 +2982,7 @@ With a non numeric prefix ARG, show all entries"
 
 ;;; Log edit mode
 
-(defvar monky-log-edit-mode-hook nil
-  "Hook run by `monky-log-edit-mode'.")
-
-(defvar monky-log-edit-buffer-name "*monky-edit-log*"
-  "Buffer name for composing commit messages.")
-
 (define-derived-mode monky-log-edit-mode text-mode "Monky Log Edit")
-
-(defvar monky-pre-log-edit-window-configuration nil)
-(defvar monky-log-edit-client-buffer nil)
-(defvar monky-log-edit-operation nil)
-(defvar monky-log-edit-info nil)
 
 (defun monky-restore-pre-log-edit-window-configuration ()
   (when monky-pre-log-edit-window-configuration
