@@ -1,4 +1,4 @@
-;;; monky.el --- Control Hg from Emacs.
+;;; monky.el --- Control Hg from Emacs.  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2011 Anantha Kumaran.
 
