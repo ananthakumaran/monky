@@ -230,11 +230,16 @@ Many Monky faces inherit from this one by default."
   "Face for lines in a diff that have been deleted."
   :group 'monky-faces)
 
-(defface monky-log-sha1
+(defface monky-commit-id
   '((((class color) (background light))
      :foreground "firebrick")
     (((class color) (background dark))
      :foreground "tomato"))
+  "Face for commit IDs: SHA1 codes and commit numbers."
+  :group 'monky-faces)
+
+(defface monky-log-sha1
+  '((t :inherit monky-commit-id))
   "Face for the sha1 element of the log output."
   :group 'monky-faces)
 
@@ -2067,6 +2072,17 @@ before the last command."
 (defun monky-wash-parent ()
   (if (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")
       (let ((changeset (match-string 2)))
+        (put-text-property
+         (match-beginning 1)
+         (match-end 1)
+         'face
+         'monky-commit-id)
+        (put-text-property
+         (match-beginning 2)
+         (match-end 2)
+         'face
+         'monky-commit-id)
+
         (add-to-list 'monky-parents changeset)
         (forward-line)
         (while (not (or (eobp)
