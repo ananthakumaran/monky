@@ -201,7 +201,12 @@ Many Monky faces inherit from this one by default."
   :group 'monky-faces)
 
 (defface monky-diff-hunk-header
-  '((t :slant italic :inherit monky-header))
+  '((((class color) (background light))
+     :background "grey80"
+     :foreground "grey30")
+    (((class color) (background dark))
+     :background "grey25"
+     :foreground "grey70"))
   "Face for diff hunk header lines."
   :group 'monky-faces)
 
@@ -1921,7 +1926,7 @@ before the last command."
       (let ((n-columns (1- (length (match-string 1))))
             (head (match-string 0)))
         (monky-with-section head 'hunk
-          (add-text-properties (match-beginning 0) (match-end 0)
+          (add-text-properties (match-beginning 0) (1+ (match-end 0))
                                '(face monky-diff-hunk-header))
           (forward-line)
           (while (not (or (eobp)
