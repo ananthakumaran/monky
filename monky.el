@@ -2000,7 +2000,7 @@ before the last command."
 (defun monky-insert-diff-title (status file)
   (insert
    (propertize
-    (format "%-10s %s\n" (capitalize (symbol-name status)) file)
+    (format "%-10s %s\n" (symbol-name status) file)
     'face 'monky-diff-title)))
 
 ;;; Untracked files
@@ -2105,7 +2105,7 @@ before the last command."
     (monky-hg-section 'merged "Merged Files:" #'monky-wash-merged-files
                       "resolve" "--list")))
 
-;;; UnModified Files
+;;; Unmodified Files
 
 (defun monky-wash-unmodified-files ()
   (monky-wash-sequence
@@ -2117,7 +2117,7 @@ before the last command."
 
 (defun monky-insert-resolved-files ()
   (let ((monky-hide-diffs t))
-    (monky-hg-section 'unmodified "UnModified Files during Merge:" #'monky-wash-unmodified-files
+    (monky-hg-section 'unmodified "Unmodified files during merge:" #'monky-wash-unmodified-files
                       "status" "--modified" "--added" "--removed")))
 ;;; Status mode
 
