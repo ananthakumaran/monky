@@ -1979,7 +1979,8 @@ before the last command."
 			      (t 'modified)))))
 	    (monky-set-section-info (list status file))
 	    (monky-insert-diff-title status file)
-	    (goto-char end)
+            ;; Remove the 'diff ...' text and '+++' text, as it's redundant.
+            (delete-region (point) end)
 	    (let ((monky-section-hidden-default nil))
 	      (monky-wash-sequence #'monky-wash-hunk))))
 	 ;; sometimes diff returns empty output
