@@ -2000,7 +2000,7 @@ before the last command."
 (defun monky-insert-diff-title (status file)
   (insert
    (propertize
-    (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)
+    (format "%-10s %s\n" (capitalize (symbol-name status)) file)
     'face 'monky-diff-title)))
 
 ;;; Untracked files
