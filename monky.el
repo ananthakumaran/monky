@@ -2236,7 +2236,7 @@ PROPERTIES is the arguments for the function `propertize'."
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
    "<phase>\\(.?*\\)</phase>"           ; 6. phase
-   "<author>\\([A-z]+\\).?*</author>"   ; 7. author
+   "<author>\\([^ ]+?\\) .*?</author>"  ; 7. author
    "<monky-date>\\([0-9]+\\).?*</monky-date>" ; 8. date
    "\\(.*\\)$"                          ; 9. msg
    ))
