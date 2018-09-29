@@ -1,4 +1,4 @@
-;;; monky.el --- Control Hg from Emacs.
+;;; monky.el --- Control Hg from Emacs.  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2011 Anantha Kumaran.
 
@@ -1658,10 +1658,10 @@ in the corresponding directory."
         (dolist (w (get-buffer-window-list (current-buffer)))
           (set-window-point w (point)))))))
 
-(defvar last-point)
+(defvar monky-last-point nil)
 
 (defun monky-remember-point ()
-  (setq last-point (point)))
+  (setq monky-last-point (point)))
 
 (defun monky-invisible-region-end (pos)
   (while (and (not (= pos (point-max))) (invisible-p pos))
@@ -1686,7 +1686,7 @@ end, except when that would move point back to where it was
 before the last command."
   (if (invisible-p (point))
       (let ((end (monky-invisible-region-end (point))))
-        (goto-char (if (= end last-point)
+        (goto-char (if (= end monky-last-point)
                        (monky-invisible-region-start (point))
                      end))))
   (setq disable-point-adjustment t))
