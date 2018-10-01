@@ -201,7 +201,12 @@ Many Monky faces inherit from this one by default."
   :group 'monky-faces)
 
 (defface monky-diff-hunk-header
-  '((t :slant italic :inherit monky-header))
+  '((((class color) (background light))
+     :background "grey80"
+     :foreground "grey30")
+    (((class color) (background dark))
+     :background "grey25"
+     :foreground "grey70"))
   "Face for diff hunk header lines."
   :group 'monky-faces)
 
@@ -230,11 +235,16 @@ Many Monky faces inherit from this one by default."
   "Face for lines in a diff that have been deleted."
   :group 'monky-faces)
 
-(defface monky-log-sha1
+(defface monky-commit-id
   '((((class color) (background light))
      :foreground "firebrick")
     (((class color) (background dark))
      :foreground "tomato"))
+  "Face for commit IDs: SHA1 codes and commit numbers."
+  :group 'monky-faces)
+
+(defface monky-log-sha1
+  '((t :inherit monky-commit-id))
   "Face for the sha1 element of the log output."
   :group 'monky-faces)
 
@@ -1916,7 +1926,7 @@ before the last command."
       (let ((n-columns (1- (length (match-string 1))))
             (head (match-string 0)))
         (monky-with-section head 'hunk
-          (add-text-properties (match-beginning 0) (match-end 0)
+          (add-text-properties (match-beginning 0) (1+ (match-end 0))
                                '(face monky-diff-hunk-header))
           (forward-line)
           (while (not (or (eobp)
@@ -1969,7 +1979,8 @@ before the last command."
 			      (t 'modified)))))
 	    (monky-set-section-info (list status file))
 	    (monky-insert-diff-title status file)
-	    (goto-char end)
+            ;; Remove the 'diff ...' text and '+++' text, as it's redundant.
+            (delete-region (point) end)
 	    (let ((monky-section-hidden-default nil))
 	      (monky-wash-sequence #'monky-wash-hunk))))
 	 ;; sometimes diff returns empty output
@@ -2000,7 +2011,7 @@ before the last command."
 (defun monky-insert-diff-title (status file)
   (insert
    (propertize
-    (format "\t%-10s %s\n" (capitalize (symbol-name status)) file)
+    (format "%-10s %s\n" (symbol-name status) file)
     'face 'monky-diff-title)))
 
 ;;; Untracked files
@@ -2067,6 +2078,17 @@ before the last command."
 (defun monky-wash-parent ()
   (if (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")
       (let ((changeset (match-string 2)))
+        (put-text-property
+         (match-beginning 1)
+         (match-end 1)
+         'face
+         'monky-commit-id)
+        (put-text-property
+         (match-beginning 2)
+         (match-end 2)
+         'face
+         'monky-commit-id)
+
         (add-to-list 'monky-parents changeset)
         (forward-line)
         (while (not (or (eobp)
@@ -2105,7 +2127,7 @@ before the last command."
     (monky-hg-section 'merged "Merged Files:" #'monky-wash-merged-files
                       "resolve" "--list")))
 
-;;; UnModified Files
+;;; Unmodified Files
 
 (defun monky-wash-unmodified-files ()
   (monky-wash-sequence
@@ -2117,7 +2139,7 @@ before the last command."
 
 (defun monky-insert-resolved-files ()
   (let ((monky-hide-diffs t))
-    (monky-hg-section 'unmodified "UnModified Files during Merge:" #'monky-wash-unmodified-files
+    (monky-hg-section 'unmodified "Unmodified files during merge:" #'monky-wash-unmodified-files
                       "status" "--modified" "--added" "--removed")))
 ;;; Status mode
 
