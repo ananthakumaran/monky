@@ -2,6 +2,8 @@
 
 Monky provides an interactive interface for Hg.
 
+![screenshot](screenshots/monky.png)
+
 ## Installation
 
 ````cl
