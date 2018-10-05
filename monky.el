@@ -2431,14 +2431,22 @@ With a non numeric prefix ARG, show all entries"
   (interactive)
   (monky-with-process
     (let ((file-name (buffer-file-name))
-	  (topdir (monky-get-root-dir)))
+	  (topdir (monky-get-root-dir))
+          (line-num (line-number-at-pos))
+          (column (current-column)))
       (pop-to-buffer
        (format "*monky-blame: %s*"
                (file-name-nondirectory buffer-file-name)))
       (monky-mode-init topdir 'blame #'monky-refresh-blame-buffer file-name)
-      (monky-blame-mode t))))
-
-
+      (monky-blame-mode t)
+      ;; Put point on the same line number as the original file.
+      (forward-line (1- line-num))
+      (while (and (not (looking-at ":")) (not (eolp)))
+        (forward-char))
+      ;; Step over the blame information columns.
+      (forward-char (length ":  "))
+      ;; Put point at the same column as the original file.
+      (forward-char column))))
 
 ;;; Commit mode
 
