@@ -925,9 +925,8 @@ CMD is an external command that will be run with ARGS as arguments"
                             (goto-char (point-min))
                             (funcall washer)
                             (goto-char (point-max)))))))
-      (if (= body-beg (point))
-          (monky-cancel-section section)
-        (insert "\n"))
+      (when (= body-beg (point))
+        (monky-cancel-section section))
       section)))
 
 (defun monky-cancel-section (section)
