@@ -1907,8 +1907,6 @@ before the last command."
   (save-excursion
     (beginning-of-line)
     (let ((line (line-number-at-pos)))
-      (if (looking-at "-")
-          (error "Can't visit removed lines"))
       (goto-char (monky-section-beginning hunk))
       (if (not (looking-at "@@+ .* \\+\\([0-9]+\\),[0-9]+ @@+"))
           (error "Hunk header not found"))
