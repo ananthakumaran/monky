@@ -2496,6 +2496,8 @@ With a non numeric prefix ARG, show all entries"
                       "--rev" commit)))
 
 (defun monky-wash-commit ()
+  (save-excursion
+    (monky-wash-parent))
   (let ((case-fold-search nil))
    (while (and (not (eobp)) (not (looking-at "^diff ")) )
      (forward-line))
