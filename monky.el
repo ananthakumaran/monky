@@ -2488,9 +2488,10 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-refresh-commit-buffer (commit)
   (monky-create-buffer-sections
     (monky-hg-section nil nil
-                      'monky-wash-commit
+                      #'monky-wash-commit
                       "-v"
                       "log"
+                      "--stat"
                       "--patch"
                       "--rev" commit)))
 
