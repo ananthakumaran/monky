@@ -15,3 +15,5 @@ env:
 script:
   - emacs --version
   - make monky.elc
+notifications:
+  email: false
