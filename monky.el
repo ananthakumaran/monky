@@ -2255,7 +2255,7 @@ PROPERTIES is the arguments for the function `propertize'."
    "<tags>\\(.?*\\)</tags>"             ; 4. tags
    "<bookmarks>\\(.?*\\)</bookmarks>"   ; 5. bookmarks
    "<phase>\\(.?*\\)</phase>"           ; 6. phase
-   "<author>\\([^ ]+?\\) .*?</author>"  ; 7. author
+   "<author>\\(.?*\\)</author>"         ; 7. author
    "<monky-date>\\([0-9]+\\).?*</monky-date>" ; 8. date
    "\\(.*\\)$"                          ; 9. msg
    ))
@@ -2281,6 +2281,24 @@ Example:
 (defvar monky-log-count ()
   "Internal var used to count the number of logs actually added in a buffer.")
 
+(defun monky--author-name (s)
+  "Extract the name from a Mercurial author string."
+  (save-match-data
+    (cond
+     ((string-match
+       ;; If S contains a space, take the first word.
+       (rx (group (1+ (not space)))
+           space)
+       s)
+      (match-string 1 s))
+     ((string-match
+       ;; If S is just an email, take the username.
+       (rx (group (1+ (not (any "@"))))
+           "@")
+       s)
+      (match-string 1 s))
+     (t s))))
+
 (defun monky-wash-log-line ()
   (if (looking-at monky-log-graph-re)
       (let ((width (window-total-width))
@@ -2290,7 +2308,7 @@ Example:
             (tags (match-string 4))
             (bookmarks (match-string 5))
             (phase (match-string 6))
-            (author (match-string 7))
+            (author (monky--author-name (match-string 7)))
             (date (format-time-string "%Y-%m-%d" (seconds-to-time (string-to-number (match-string 8)))))
             (msg (match-string 9)))
         (monky-delete-line)
