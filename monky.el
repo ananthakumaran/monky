@@ -589,7 +589,7 @@ refreshes buffers."
 
 (defun monky-process-file (&rest args)
   "Same as `process-file' in the current hg environment.
-This function either call `monky-process-file-cmdserver' or
+This function either calls `monky-cmdserver-process-file' or
 `monky-process-file-single' depending on whether the hg
 command-server should be used."
   (apply (cond
