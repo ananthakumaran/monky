@@ -1892,7 +1892,8 @@ before the last command."
    (monky-with-wash-status status file
      (monky-with-section file 'file
        (monky-set-section-info file)
-       (insert "\t" file "\n")))))
+       (insert file "\n"))
+     (insert "\n"))))
 
 ;; Hunk
 
