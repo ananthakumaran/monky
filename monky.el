@@ -1209,7 +1209,8 @@ IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, show
         (message msg)))
     (when (not successp)
       (let ((msg (monky-abort-message (process-buffer process))))
-        (and msg (message msg))))
+        (when msg
+          (message msg))))
     (setq monky-process nil)
     (monky-set-mode-line-process nil)
     (if (buffer-live-p monky-process-client-buffer)
