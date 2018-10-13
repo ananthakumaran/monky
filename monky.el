@@ -3120,9 +3120,11 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-log-edit ()
   "Bring up a buffer to allow editing of commit messages."
   (interactive)
-  (if (not (or monky-staged-files (monky-merge-p)))
-      (user-error "Nothing staged")
-    (monky-pop-to-log-edit 'commit)))
+  (when (not (or monky-staged-files (monky-merge-p)))
+    (if (y-or-n-p "Nothing staged. Stage and commit all changes? ")
+        (monky-stage-all)
+      (user-error "Nothing staged")))
+  (monky-pop-to-log-edit 'commit))
 
 (defun monky-commit-amend ()
   "Amends previous commit.
