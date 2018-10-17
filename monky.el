@@ -484,7 +484,9 @@ refreshes buffers."
                 (with-current-buffer buffer
                   (bury-buffer))))
       (setq default-directory dir)
-      (let ((monky-cmd-process (monky-start-process "monky-hg" buf "sh" "-c" "hg --config extensions.mq= serve --cmdserver pipe 2> /dev/null")))
+      (let ((monky-cmd-process (monky-start-process
+                                "monky-hg" buf "sh" "-c"
+                                (format "%s --config extensions.mq= serve --cmdserver pipe 2> /dev/null" monky-hg-executable))))
         (set-process-coding-system monky-cmd-process 'no-conversion 'no-conversion)
         (set-process-sentinel monky-cmd-process #'monky-cmdserver-sentinel)
         (setq monky-cmd-hello-message
