@@ -701,6 +701,7 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd ":") 'monky-hg-command)
     (define-key map (kbd "l l") 'monky-log-current-branch)
     (define-key map (kbd "l a") 'monky-log-all)
+    (define-key map (kbd "l r") 'monky-log-revset)
     (define-key map (kbd "b") 'monky-branches)
     (define-key map (kbd "Q") 'monky-queue)
     (define-key map (kbd "q") 'monky-quit-window)
@@ -2241,6 +2242,10 @@ PROPERTIES is the arguments for the function `propertize'."
 (defun monky-log-all ()
   (interactive)
   (monky-log nil))
+
+(defun monky-log-revset (revset)
+  (interactive  "sRevset: ")
+  (monky-log revset))
 
 (defun monky-log (revs)
   (monky-with-process
