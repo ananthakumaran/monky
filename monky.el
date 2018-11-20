@@ -1791,11 +1791,11 @@ before the last command."
 
 (defun monky-get-tramp-root-dir ()
   (let ((root (monky-hg-string "root"))
-	(tramp-path (tramp-dissect-file-name default-directory)))
+        (tramp-path (vconcat (tramp-dissect-file-name default-directory))))
     (if root
-	(progn (aset tramp-path 3 root)
-	       (concat (apply 'tramp-make-tramp-file-name (append tramp-path ()))
-		       "/"))
+        (progn (aset tramp-path 6 root)
+               (concat (apply 'tramp-make-tramp-file-name (cdr (append tramp-path nil)))
+                       "/"))
       (user-error "Not inside a hg repo"))))
 
 (defun monky-find-buffer (submode &optional dir)
