@@ -2,3 +2,5 @@ monky*.tar
 *.elc
 *~
 monky-0.*
+
+.cask
