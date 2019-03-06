@@ -391,12 +391,6 @@ refreshes buffers."
            (debug (body)))
   `(monky-refresh-wrapper (lambda () ,@body)))
 
-(defmacro monky-def-permanent-buffer-local (name &optional init-value)
-  `(progn
-     (defvar ,name ,init-value)
-     (make-variable-buffer-local ',name)
-     (put ',name 'permanent-local t)))
-
 (defun monky-completing-read (&rest args)
   (apply (if (null ido-mode)
              'completing-read
@@ -427,14 +421,14 @@ refreshes buffers."
 (defvar monky-cmd-hello-message nil
   "Variable to store parsed hello message.")
 
-(monky-def-permanent-buffer-local monky-root-dir)
+;; TODO: does this need to be permanent? If it's only used in monky buffers (not source file buffers), it shouldn't be.
+(defvar-local monky-root-dir nil)
+(put 'monky-root-dir 'permanent-local t)
 
 (defun monky-cmdserver-sentinel (proc change)
   (unless (memq (process-status proc) '(run stop))
     (let ((buf (process-buffer proc)))
-      (delete-process proc)
-      ;(kill-buffer buf)
-      )))
+      (delete-process proc))))
 
 (defun monky-cmdserver-read-data (size)
   (with-current-buffer (process-buffer monky-cmd-process)
@@ -788,8 +782,7 @@ FUNC should leave point at the end of the modified region"
 
 ;;; Sections
 
-(monky-def-permanent-buffer-local monky-top-section)
-
+(defvar-local monky-top-section nil)
 (defvar monky-old-top-section nil)
 (defvar monky-section-hidden-default nil)
 
@@ -975,9 +968,9 @@ CMD is an external command that will be run with ARGS as arguments"
           (or next
               (monky-next-section parent))))))
 
-(monky-def-permanent-buffer-local monky-submode)
-(monky-def-permanent-buffer-local monky-refresh-function)
-(monky-def-permanent-buffer-local monky-refresh-args)
+(defvar-local monky-submode nil)
+(defvar-local monky-refresh-function nil)
+(defvar-local monky-refresh-args nil)
 
 (defun monky-goto-next-section ()
   "Go to the next monky section."
@@ -1397,7 +1390,7 @@ With a prefix argument, visit in other window."
 
 (defvar monky-staged-all-files nil)
 (defvar monky-old-staged-files '())
-(monky-def-permanent-buffer-local monky-staged-files)
+(defvar-local monky-staged-files nil)
 
 (defun monky-stage-all ()
   "Add all items in Changes to the staging area."
@@ -1717,11 +1710,11 @@ before the last command."
   (run-hooks 'monky-mode-hook))
 
 (defun monky-mode-init (dir submode refresh-func &rest refresh-args)
+  (monky-mode)
   (setq default-directory dir
         monky-submode submode
         monky-refresh-function refresh-func
         monky-refresh-args refresh-args)
-  (monky-mode)
   (monky-refresh-buffer))
 
 
@@ -2662,8 +2655,8 @@ With a non numeric prefix ARG, show all entries"
   (monky-wash-queue-insert-patch #'insert-file-contents))
 
 (defvar monky-queue-staged-all-files nil)
-(monky-def-permanent-buffer-local monky-queue-staged-files)
-(monky-def-permanent-buffer-local monky-queue-old-staged-files)
+(defvar-local monky-queue-staged-files nil)
+(defvar-local monky-queue-old-staged-files nil)
 
 (defun monky-wash-queue-discarding ()
   (monky-wash-sequence
