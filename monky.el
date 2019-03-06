@@ -1073,24 +1073,13 @@ CMD is an external command that will be run with ARGS as arguments"
         (dolist (c (monky-section-children section))
           (monky-section-set-hidden c (monky-section-hidden c))))))
 
-(defun monky-section-hideshow (flag-or-func)
-  "Show or hide current section depending on FLAG-OR-FUNC.
-
-If FLAG-OR-FUNC is a function, it will be ran on current section
-IF FLAG-OR-FUNC is a Boolean value, the section will be hidden if its true, shown otherwise"
-  (let ((section (monky-current-section)))
-    (when (monky-section-parent section)
-      (goto-char (monky-section-beginning section))
-      (if (functionp flag-or-func)
-          (funcall flag-or-func section)
-        (monky-section-set-hidden section flag-or-func)))))
-
 (defun monky-toggle-section ()
   "Toggle hidden status of current section."
   (interactive)
-  (monky-section-hideshow
-   (lambda (s)
-     (monky-section-set-hidden s (not (monky-section-hidden s))))))
+  (let ((section (monky-current-section)))
+    (when (monky-section-parent section)
+      (goto-char (monky-section-beginning section))
+      (monky-section-set-hidden section (not (monky-section-hidden section))))))
 
 ;;; Running commands
 
