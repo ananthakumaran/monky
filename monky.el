@@ -1691,23 +1691,16 @@ before the last command."
 
 ;;; Monky mode
 
-(defun monky-mode ()
-  "View the status of a Hg Repository.
+(define-derived-mode monky-mode special-mode "Monky"
+  "View the status of a mercurial repository.
 
 \\{monky-mode-map}"
-  (kill-all-local-variables)
-  (buffer-disable-undo)
   (setq buffer-read-only t)
-  (make-local-variable 'line-move-visual)
-  (setq major-mode 'monky-mode
-        mode-name "Monky"
-        mode-line-process ""
-        truncate-lines t
-        line-move-visual nil)
+  (setq mode-line-process "")
+  (setq truncate-lines t)
+  (setq-local line-move-visual nil)
   (add-hook 'pre-command-hook #'monky-remember-point nil t)
-  (add-hook 'post-command-hook #'monky-post-command-hook t t)
-  (use-local-map monky-mode-map)
-  (run-hooks 'monky-mode-hook))
+  (add-hook 'post-command-hook #'monky-post-command-hook t t))
 
 (defun monky-mode-init (dir submode refresh-func &rest refresh-args)
   (monky-mode)
