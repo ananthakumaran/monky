@@ -1699,7 +1699,6 @@ before the last command."
   (setq buffer-read-only t)
   (setq mode-line-process "")
   (setq truncate-lines t)
-  (setq-local line-move-visual nil)
   (add-hook 'pre-command-hook #'monky-remember-point nil t)
   (add-hook 'post-command-hook #'monky-post-command-hook t t))
 
