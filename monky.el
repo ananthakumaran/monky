@@ -28,6 +28,7 @@
 (require 'cl-lib)
 (require 'bindat)
 (require 'ediff)
+(require 'subr-x)
 (require 'view)
 (require 'tramp)
 
@@ -2043,6 +2044,26 @@ before the last command."
     (insert "\n"))
   (setq monky-staged-all-files nil))
 
+;;; Shelves
+
+(defun monky-extensions ()
+  "Return a list of all the enabled mercurial extensions."
+  (let* ((config
+          (string-trim (shell-command-to-string "hg config extensions")))
+         (lines
+          (split-string config "\n"))
+         extensions)
+    (dolist (line lines)
+      (unless (string-match-p (rx "!" eos) line)
+        (setq line (string-remove-prefix "extensions." line))
+        (setq line (string-remove-suffix "=" line)))
+      (push line extensions))
+    (nreverse extensions)))
+
+(defun monky-insert-shelves ()
+  (when (member "shelve" (monky-extensions))
+    (monky-hg-section 'shelves "Shelves:" #'ignore
+                      "shelve" "--list")))
 
 ;;; Parents
 
@@ -2133,7 +2154,8 @@ before the last command."
         (monky-insert-untracked-files)
         (monky-insert-missing-files)
         (monky-insert-changes)
-        (monky-insert-staged-changes)))))
+        (monky-insert-staged-changes)
+        (monky-insert-shelves)))))
 
 (define-minor-mode monky-status-mode
   "Minor mode for hg status.
