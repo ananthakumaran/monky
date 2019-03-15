@@ -1269,7 +1269,7 @@ CMD is an external command that will be run with ARGS as arguments"
 
 ;;; Actions
 
-(defmacro monky-section-case (head &rest clauses)
+(defmacro monky-section-case (opname head &rest clauses)
   "Make different action depending of current section.
 
 HEAD is (SECTION INFO &optional OPNAME),
@@ -1287,13 +1287,12 @@ otherwise it return t.
 If no section matches, this returns nil if no OPNAME was given
 and throws an error otherwise."
 
-  (declare (indent 1)
-           (debug (sexp &rest (sexp body))))
+  (declare (indent 2)
+           (debug (form sexp &rest (sexp body))))
   (let ((section (car head))
         (info (cadr head))
         (type (make-symbol "*type*"))
-        (context (make-symbol "*context*"))
-        (opname (caddr head)))
+        (context (make-symbol "*context*")))
     `(let* ((,section (monky-current-section))
             (,info (monky-section-info ,section))
             (,type (monky-section-type ,section))
@@ -1315,22 +1314,22 @@ and throws an error otherwise."
                            ,opname
                            ,type))))))))
 
-(defmacro monky-section-action (head &rest clauses)
+(defmacro monky-section-action (opname head &rest clauses)
   "Refresh monky buffers after executing action defined in CLAUSES.
 
 See `monky-section-case' for the definition of HEAD and CLAUSES and
 `monky-with-refresh' for how the buffers are refreshed."
-  (declare (indent 1)
+  (declare (indent 2)
            (debug (sexp &rest (sexp body))))
   `(monky-with-refresh
-     (monky-section-case ,head ,@clauses)))
+     (monky-section-case ,opname ,head ,@clauses)))
 
 (defun monky-visit-item (&optional other-window)
   "Visit current item.
 With a prefix argument, visit in other window."
   (interactive (list current-prefix-arg))
   (let ((ff (if other-window 'find-file-other-window 'find-file)))
-    (monky-section-action (item info "visit")
+    (monky-section-action "visit" (item info)
       ((file)
        (funcall ff info))
       ((diff)
@@ -1353,7 +1352,7 @@ With a prefix argument, visit in other window."
 (defun monky-ediff-item ()
   "Open the ediff merge editor on the item."
   (interactive)
-  (monky-section-action (item info "ediff")
+  (monky-section-action "ediff" (item info)
     ((merged diff)
      (if (eq (monky-diff-item-kind item) 'unresolved)
 	 (monky-ediff-merged item)
@@ -1403,7 +1402,7 @@ With a prefix argument, visit in other window."
 (defun monky-stage-item ()
   "Add the item at point to the staging area."
   (interactive)
-  (monky-section-action (item info "stage")
+  (monky-section-action "stage" (item info)
     ((untracked file)
      (monky-run-hg "add" info))
     ((untracked)
@@ -1433,7 +1432,7 @@ With a prefix argument, visit in other window."
   "Remove the item at point from the staging area."
   (interactive)
   (monky-with-process
-    (monky-section-action (item info "unstage")
+    (monky-section-action "unstage" (item info)
       ((staged diff)
        (monky-unstage-file (monky-section-title item))
        (monky-refresh-buffer))
@@ -1504,7 +1503,7 @@ With a prefix argument, visit in other window."
 (defun monky-unresolve-item ()
   "Mark the item at point as unresolved."
   (interactive)
-  (monky-section-action (item info "unresolve")
+  (monky-section-action "unresolve" (item info)
     ((merged diff)
      (if (eq (monky-diff-item-kind item) 'resolved)
          (monky-run-hg "resolve" "--unmark" (monky-diff-item-file item))
@@ -1513,7 +1512,7 @@ With a prefix argument, visit in other window."
 (defun monky-resolve-item ()
   "Mark the item at point as resolved."
   (interactive)
-  (monky-section-action (item info "resolve")
+  (monky-section-action "resolve" (item info)
     ((merged diff)
      (if (eq (monky-diff-item-kind item) 'unresolved)
          (monky-run-hg "resolve" "--mark" (monky-diff-item-file item))
@@ -1529,13 +1528,13 @@ With a prefix argument, visit in other window."
 (defun monky-backout-item ()
   "Backout the revision represented by current item."
   (interactive)
-  (monky-section-action (item info "backout")
+  (monky-section-action "backout" (item info)
     ((log commits commit)
      (monky-backout info))))
 
 (defun monky-show-item-or-scroll-up ()
   (interactive)
-  (monky-section-action (item info)
+  (monky-section-action "show" (item info)
     ((commit)
      (monky-show-commit info nil #'scroll-up))
     (t
@@ -1543,7 +1542,7 @@ With a prefix argument, visit in other window."
 
 (defun monky-show-item-or-scroll-down ()
   (interactive)
-  (monky-section-action (item info)
+  (monky-section-action "show" (item info)
     ((commit)
      (monky-show-commit info nil #'scroll-down))
     (t
@@ -1565,7 +1564,7 @@ With a prefix argument, visit in other window."
 (defun monky-discard-item ()
   "Delete the file if not tracked, otherwise revert it."
   (interactive)
-  (monky-section-action (item info "discard")
+  (monky-section-action "discard" (item info)
     ((untracked file)
      (when (yes-or-no-p (format "Delete %s? " info))
        (delete-file info)
@@ -2599,7 +2598,7 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-checkout-item ()
   "Checkout the revision represented by current item."
   (interactive)
-  (monky-section-action (item info "checkout")
+  (monky-section-action "checkout" (item info)
     ((branch)
      (monky-checkout info))
     ((log commits commit)
@@ -2608,7 +2607,7 @@ With a non numeric prefix ARG, show all entries"
 (defun monky-merge-item ()
   "Merge the revision represented by current item."
   (interactive)
-  (monky-section-action (item info "merge")
+  (monky-section-action "merge" (item info)
     ((branch)
      (monky-merge info))
     ((log commits commit)
@@ -2943,7 +2942,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-qimport-item ()
   (interactive)
-  (monky-section-action (item info "qimport")
+  (monky-section-action "qimport" (item info)
     ((log commits commit)
      (if (region-active-p)
 	 (monky-qimport
@@ -2954,7 +2953,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-qpop-item ()
   (interactive)
-  (monky-section-action (item info "qpop")
+  (monky-section-action "qpop" (item info)
     ((applied patch)
      (monky-qpop info)
      (monky-qpop))
@@ -2977,7 +2976,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-qpush-item ()
   (interactive)
-  (monky-section-action (item info "qpush")
+  (monky-section-action "qpush" (item info)
     ((unapplied patch)
      (monky-qpush info))
     ((unapplied)
@@ -3005,31 +3004,31 @@ With a non numeric prefix ARG, show all entries"
 
 (defun monky-qremove-item ()
   (interactive)
-  (monky-section-action (item info "qremove")
+  (monky-section-action "qremove" (item info)
     ((unapplied patch)
      (monky-qremove info))))
 
 (defun monky-qrename-item ()
   (interactive)
-  (monky-section-action (item info "qrename")
+  (monky-section-action "qrename" (item info)
     ((patch)
      (monky-qrename info))))
 
 (defun monky-qfold-item ()
   (interactive)
-  (monky-section-action (item info "qfold")
+  (monky-section-action "qfold" (item info)
     ((unapplied patch)
      (monky-qfold info))))
 
 (defun monky-qguard-item ()
   (interactive)
-  (monky-section-action (item info "qguard")
+  (monky-section-action "qguard" (item info)
     ((patch)
      (monky-qguard info))))
 
 (defun monky-qfinish-item ()
   (interactive)
-  (monky-section-action (item info "qfinish")
+  (monky-section-action "qfinish" (item info)
     ((applied patch)
      (monky-qfinish info))))
 
