@@ -1146,8 +1146,8 @@ CMD is an external command that will be run with ARGS as arguments"
 	      (monky-cmd-process
 	       (let ((monky-cmd-process-input-buffer input)
 		     (monky-cmd-process-input-point (and input
-						 (with-current-buffer input
-						   (point-min)))))
+						         (with-current-buffer input
+						           (point-min)))))
 		 (setq successp
 		       (equal (apply #'monky-cmdserver-runcommand (cdr cmd-and-args)) 0))
 		 (monky-set-mode-line-process nil)
@@ -1230,7 +1230,7 @@ CMD is an external command that will be run with ARGS as arguments"
                         args))))
 
 (defun monky-run-hg-sync (&rest args)
-    (message "Running %s %s"
+  (message "Running %s %s"
            monky-hg-executable
            (mapconcat #'identity args " "))
   (monky-run* (append (cons monky-hg-executable
@@ -1486,7 +1486,7 @@ With a prefix argument, visit in other window."
 (defun monky-reset-tip ()
   (interactive)
   (when (yes-or-no-p "Discard all uncommitted changes? ")
-      (monky-run-hg "update" "--clean")))
+    (monky-run-hg "update" "--clean")))
 
 (defun monky-addremove-all ()
   (interactive)
@@ -1804,9 +1804,9 @@ before the last command."
   "Return an alist of (name . value) for section"
   (mapcar (lambda (item)
             (cons (cdar item) (cdr item)))
-   (remove-if-not (lambda (item)
-                    (equal section (caar item)))
-                  (monky-hg-config))))
+          (remove-if-not (lambda (item)
+                           (equal section (caar item)))
+                         (monky-hg-config))))
 
 (defvar monky-el-directory
   (file-name-directory (or load-file-name default-directory))
