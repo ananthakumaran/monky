@@ -1306,7 +1306,7 @@ and throws an error otherwise."
                        clauses)
              ,@(when opname
                  `(((not ,type)
-                    (error "Nothing to %s here" ,opname))
+                    (user-error "Nothing to %s here" ,opname))
                    (t
                     (error "Can't %s as %s"
                            ,opname
