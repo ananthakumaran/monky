@@ -2068,9 +2068,10 @@ before the last command."
 
 (defun monky-wash-shelves ()
   "Set shelf names on each line.
-This is naive and assumes that shelf names never contain spaces."
+This is naive and assumes that shelf names never contain (."
   (while (re-search-forward
-          (rx bol (group (+ (not (any space)))) space)
+          (rx bol (group (+? not-newline))
+              (+ space) "(")
           nil
           t)
     (put-text-property
