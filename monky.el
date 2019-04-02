@@ -2538,13 +2538,13 @@ With a non numeric prefix ARG, show all entries"
         (inhibit-read-only t))
     (pop-to-buffer buffer)
 
-    (setq buffer-read-only t)
     (erase-buffer)
     (monky-hg-section
      nil nil
      #'ignore
      "shelve" "-l" "-p" name)
-    (goto-char (point-min))))
+    (goto-char (point-min))
+    (monky-mode)))
 
 (defun monky-refresh-commit-buffer (commit)
   (monky-create-buffer-sections
