@@ -1346,7 +1346,8 @@ With a prefix argument, visit in other window."
       ((branch)
        (monky-checkout (monky-section-info (monky-current-section))))
       ((shelves)
-       (monky-show-shelf (monky-section-info (monky-current-section)))))))
+       (monky-show-shelf
+        (get-text-property (line-beginning-position) 'monky-shelf-name))))))
 
 (defun monky-ediff-item ()
   "Open the ediff merge editor on the item."
@@ -2074,7 +2075,11 @@ This is naive and assumes that shelf names never contain spaces."
      (match-end 1)
      'face
      'monky-commit-id)
-    (monky-set-section-info (match-string 1))))
+    (put-text-property
+     (match-beginning 1)
+     (match-end 1)
+     'monky-shelf-name
+     (match-string 1))))
 
 ;;; Parents
 
