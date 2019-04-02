@@ -1344,7 +1344,9 @@ With a prefix argument, visit in other window."
       ((queue)
        (monky-qqueue (monky-section-info (monky-current-section))))
       ((branch)
-       (monky-checkout (monky-section-info (monky-current-section)))))))
+       (monky-checkout (monky-section-info (monky-current-section))))
+      ((shelves)
+       (monky-show-shelf (monky-section-info (monky-current-section)))))))
 
 (defun monky-ediff-item ()
   "Open the ediff merge editor on the item."
@@ -2057,8 +2059,22 @@ before the last command."
 
 (defun monky-insert-shelves ()
   (when (member "shelve" (monky-extensions))
-    (monky-hg-section 'shelves "Shelves:" #'ignore
+    (monky-hg-section 'shelves "Shelves:" #'monky-wash-shelves
                       "shelve" "--list")))
+
+(defun monky-wash-shelves ()
+  "Set shelf names on each line.
+This is naive and assumes that shelf names never contain spaces."
+  (while (not (eobp))
+    (re-search-forward (rx bos (group (+ (not (any space)))) space))
+    (put-text-property
+     (match-beginning 1)
+     (match-end 1)
+     'face
+     'monky-commit-id)
+    (monky-set-section-info (match-string 1))
+    (goto-char (line-beginning-position))
+    (forward-line 1)))
 
 ;;; Parents
 
@@ -2511,6 +2527,19 @@ With a non numeric prefix ARG, show all entries"
           (monky-commit-mode t))))
       (if select
           (pop-to-buffer buffer)))))
+
+(defun monky-show-shelf (name)
+  (let ((buffer (get-buffer-create "*monky-shelf*"))
+        (inhibit-read-only t))
+    (pop-to-buffer buffer)
+
+    (setq buffer-read-only t)
+    (erase-buffer)
+    (monky-hg-section
+     nil nil
+     #'ignore
+     "shelve" "-l" "-p" name)
+    (goto-char (point-min))))
 
 (defun monky-refresh-commit-buffer (commit)
   (monky-create-buffer-sections
