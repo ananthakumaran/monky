@@ -1574,7 +1574,10 @@ With a prefix argument, visit in other window."
     ((staged diff)
      (monky-revert-file (monky-diff-item-file (monky-current-section))))
     ((missing file)
-     (monky-revert-file (monky-section-info (monky-current-section))))))
+     (monky-revert-file (monky-section-info (monky-current-section))))
+    ((shelves)
+     (monky-delete-shelf
+      (get-text-property (line-beginning-position) 'monky-shelf-name)))))
 
 (defun monky-quit-window (&optional kill-buffer)
   "Bury the buffer and delete its window.  With a prefix argument, kill the
@@ -2545,6 +2548,11 @@ With a non numeric prefix ARG, show all entries"
      "shelve" "-l" "-p" name)
     (goto-char (point-min))
     (monky-mode)))
+
+(defun monky-delete-shelf (name)
+  (unless (zerop (monky-hg-exit-code "shelve" "--delete" name))
+    (user-error "Could not drop shelved %s" name))
+  (monky-refresh-buffer))
 
 (defun monky-refresh-commit-buffer (commit)
   (monky-create-buffer-sections
