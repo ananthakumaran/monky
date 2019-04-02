@@ -426,10 +426,9 @@ refreshes buffers."
 (defvar-local monky-root-dir nil)
 (put 'monky-root-dir 'permanent-local t)
 
-(defun monky-cmdserver-sentinel (proc change)
+(defun monky-cmdserver-sentinel (proc _change)
   (unless (memq (process-status proc) '(run stop))
-    (let ((buf (process-buffer proc)))
-      (delete-process proc))))
+    (delete-process proc)))
 
 (defun monky-cmdserver-read-data (size)
   (with-current-buffer (process-buffer monky-cmd-process)
