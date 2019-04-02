@@ -1338,7 +1338,7 @@ With a prefix argument, visit in other window."
          (goto-char (point-min))
          (forward-line (1- line))))
       ((commit)
-       (message (monky-show-commit (monky-section-info (monky-current-section)))))
+       (monky-show-commit (monky-section-info (monky-current-section))))
       ((longer)
        (monky-log-show-more-entries))
       ((queue)
