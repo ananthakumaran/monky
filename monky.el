@@ -1869,12 +1869,15 @@ before the last command."
 ;; File
 
 (defun monky-wash-files ()
-  (monky-wash-sequence
-   (monky-with-wash-status status file
-     (monky-with-section file 'file
-       (monky-set-section-info file)
-       (insert file "\n"))
-     (insert "\n"))))
+  (let ((empty t))
+    (monky-wash-sequence
+     (monky-with-wash-status status file
+       (setq empty nil)
+       (monky-with-section file 'file
+         (monky-set-section-info file)
+         (insert file "\n"))))
+    (unless empty
+      (insert "\n"))))
 
 ;; Hunk
 
@@ -2015,7 +2018,8 @@ before the last command."
                (member file monky-old-staged-files))
            (monky-stage-file file)
          (monky-with-section file 'diff
-           (monky-insert-diff file status)))))))
+           (monky-insert-diff file status))))))
+  (insert "\n"))
 
 
 (defun monky-insert-changes ()
