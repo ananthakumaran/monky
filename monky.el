@@ -2009,15 +2009,18 @@ CALLBACK is called with the status and the associated filename."
 ;;; Changes
 
 (defun monky-wash-changes ()
-  (monky-wash-status-lines
-   (lambda (status file)
-     (let ((monky-section-hidden-default monky-hide-diffs))
-       (if (or monky-staged-all-files
-               (member file monky-old-staged-files))
-           (monky-stage-file file)
-         (monky-with-section file 'diff
-           (monky-insert-diff file status))))))
-  (insert "\n"))
+  (let ((changes-p nil))
+    (monky-wash-status-lines
+     (lambda (status file)
+       (let ((monky-section-hidden-default monky-hide-diffs))
+         (if (or monky-staged-all-files
+                 (member file monky-old-staged-files))
+             (monky-stage-file file)
+           (monky-with-section file 'diff
+             (monky-insert-diff file status))
+           (setq changes-p t)))))
+    (when changes-p
+      (insert "\n"))))
 
 
 (defun monky-insert-changes ()
