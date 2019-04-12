@@ -1845,33 +1845,31 @@ before the last command."
 
 ;;; Washers
 
-(defmacro monky-with-wash-status (status file &rest body)
-  (declare (indent 2)
-           (debug (symbolp symbolp body)))
-  `(lambda ()
-     (if (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$")
-         (let ((,status (case (string-to-char (match-string-no-properties 1))
-                          (?M 'modified)
-                          (?A 'new)
-                          (?R 'removed)
-                          (?C 'clean)
-                          (?! 'missing)
-                          (?? 'untracked)
-                          (?I 'ignored)
-                          (?U 'unresolved)
-                          (t nil)))
-               (,file (match-string-no-properties 2)))
-           (monky-delete-line t)
-           ,@body
-           t)
-       nil)))
+(defun monky-wash-status-lines (callback)
+  "For every status line in the current buffer, remove it and call CALLBACK.
+CALLBACK is called with the status and the associated filename."
+  (while (and (not (eobp))
+              (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$"))
+    (let ((status (case (string-to-char (match-string-no-properties 1))
+                    (?M 'modified)
+                    (?A 'new)
+                    (?R 'removed)
+                    (?C 'clean)
+                    (?! 'missing)
+                    (?? 'untracked)
+                    (?I 'ignored)
+                    (?U 'unresolved)
+                    (t nil)))
+          (file (match-string-no-properties 2)))
+      (monky-delete-line t)
+      (funcall callback status file))))
 
 ;; File
 
 (defun monky-wash-files ()
   (let ((empty t))
-    (monky-wash-sequence
-     (monky-with-wash-status status file
+    (monky-wash-status-lines
+     (lambda (_status file)
        (setq empty nil)
        (monky-with-section file 'file
          (monky-set-section-info file)
@@ -2011,8 +2009,8 @@ before the last command."
 ;;; Changes
 
 (defun monky-wash-changes ()
-  (monky-wash-sequence
-   (monky-with-wash-status status file
+  (monky-wash-status-lines
+   (lambda (status file)
      (let ((monky-section-hidden-default monky-hide-diffs))
        (if (or monky-staged-all-files
                (member file monky-old-staged-files))
@@ -2132,8 +2130,8 @@ This is naive and assumes that shelf names never contain (."
 (make-variable-buffer-local 'monky-merged-files)
 
 (defun monky-wash-merged-files ()
-  (monky-wash-sequence
-   (monky-with-wash-status status file
+  (monky-wash-status-lines
+   (lambda (status file)
      (let ((monky-section-hidden-default monky-hide-diffs))
        (add-to-list 'monky-merged-files file)
        ;; XXX hg uses R for resolved and removed status
@@ -2152,8 +2150,8 @@ This is naive and assumes that shelf names never contain (."
 ;;; Unmodified Files
 
 (defun monky-wash-unmodified-files ()
-  (monky-wash-sequence
-   (monky-with-wash-status status file
+  (monky-wash-status-lines
+   (lambda (_status file)
      (let ((monky-section-hidden-default monky-hide-diffs))
        (when (not (member file monky-merged-files))
          (monky-with-section file 'diff
@@ -2716,8 +2714,8 @@ With a non numeric prefix ARG, show all entries"
 (defvar-local monky-queue-old-staged-files nil)
 
 (defun monky-wash-queue-discarding ()
-  (monky-wash-sequence
-   (monky-with-wash-status status file
+  (monky-wash-status-lines
+   (lambda (status file)
      (let ((monky-section-hidden-default monky-hide-diffs))
        (if (or monky-queue-staged-all-files
                (member file monky-old-staged-files)
