@@ -1341,9 +1341,9 @@ With a prefix argument, visit in other window."
        (monky-qqueue (monky-section-info (monky-current-section))))
       ((branch)
        (monky-checkout (monky-section-info (monky-current-section))))
-      ((shelves)
+      ((shelf)
        (monky-show-shelf
-        (get-text-property (line-beginning-position) 'monky-shelf-name))))))
+	(monky-section-info (monky-current-section)))))))
 
 (defun monky-ediff-item ()
   "Open the ediff merge editor on the item."
@@ -1931,6 +1931,8 @@ CALLBACK is called with the status and the associated filename."
 (defun monky-diff-line-file ()
   (cond ((looking-at "^diff -r \\([^ ]*\\) \\(-r \\([^ ]*\\) \\)?\\(.*\\)$")
          (match-string-no-properties 4))
+	((looking-at (rx "diff --git a/" (group (+? anything)) " b/"))
+	 (match-string-no-properties 1))
         (t
          nil)))
 
@@ -2075,16 +2077,15 @@ This is naive and assumes that shelf names never contain (."
               (+ space) "(")
           nil
           t)
-    (put-text-property
-     (match-beginning 1)
-     (match-end 1)
-     'face
-     'monky-commit-id)
-    (put-text-property
-     (match-beginning 1)
-     (match-end 1)
-     'monky-shelf-name
-     (match-string 1))))
+    (goto-char (line-beginning-position))
+    (monky-with-section 'shelf nil
+      (monky-set-section-info (match-string 1))
+      (put-text-property
+       (match-beginning 1)
+       (match-end 1)
+       'face
+       'monky-commit-id)
+      (goto-char (line-end-position)))))
 
 ;;; Parents
 
@@ -2556,6 +2557,9 @@ With a non numeric prefix ARG, show all entries"
      #'ignore
      "shelve" "-l" "-p" name)
     (goto-char (point-min))
+    (when (re-search-forward "^diff " nil t)
+      (goto-char (line-beginning-position))
+      (monky-wash-diffs))
     (monky-mode)))
 
 (defun monky-delete-shelf (name)
