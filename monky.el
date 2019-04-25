@@ -2096,20 +2096,29 @@ This is naive and assumes that shelf names never contain (."
 
 (defun monky-wash-parent ()
   (if (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")
-      (let ((changeset (match-string 2)))
-        (put-text-property
-         (match-beginning 1)
-         (match-end 1)
-         'face
-         'monky-commit-id)
-        (put-text-property
-         (match-beginning 2)
-         (match-end 2)
-         'face
-         'monky-commit-id)
-
+      (let ((changeset (match-string 2))
+	    (line (buffer-substring (line-beginning-position) (line-end-position))))
         (push changeset monky-parents)
-        (forward-line)
+
+	;; Remove the plain text 'changeset: ...' and replace it with
+	;; propertized text, plus a section that knows the changeset
+	;; (so RET shows the full commit).
+	(monky-with-section 'commit nil
+	  (monky-set-section-info changeset)
+	  (monky-delete-line t)
+	  (insert line "\n")
+
+	  (put-text-property
+           (match-beginning 1)
+           (match-end 1)
+           'face
+           'monky-commit-id)
+          (put-text-property
+           (match-beginning 2)
+           (match-end 2)
+           'face
+           'monky-commit-id))
+
         (while (not (or (eobp)
                         (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")))
           (forward-line))
