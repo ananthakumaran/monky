@@ -2088,7 +2088,7 @@ This is naive and assumes that shelf names never contain (."
 
 ;;; Parents
 
-(defvar monky-parents '())
+(defvar monky-parents nil)
 (make-variable-buffer-local 'monky-parents)
 
 (defun monky-merge-p ()
@@ -2108,7 +2108,7 @@ This is naive and assumes that shelf names never contain (."
          'face
          'monky-commit-id)
 
-        (add-to-list 'monky-parents changeset)
+        (push changeset monky-parents)
         (forward-line)
         (while (not (or (eobp)
                         (looking-at "changeset:\s*\\([0-9]+\\):\\([0-9a-z]+\\)")))
@@ -2125,14 +2125,14 @@ This is naive and assumes that shelf names never contain (."
 
 ;;; Merged Files
 
-(defvar monky-merged-files '())
+(defvar monky-merged-files nil)
 (make-variable-buffer-local 'monky-merged-files)
 
 (defun monky-wash-merged-files ()
   (monky-wash-status-lines
    (lambda (status file)
      (let ((monky-section-hidden-default monky-hide-diffs))
-       (add-to-list 'monky-merged-files file)
+       (push file monky-merged-files)
        ;; XXX hg uses R for resolved and removed status
        (let ((status (if (eq status 'unresolved)
                          'unresolved
@@ -2163,8 +2163,8 @@ This is naive and assumes that shelf names never contain (."
 ;;; Status mode
 
 (defun monky-refresh-status ()
-  (setq monky-parents '()
-        monky-merged-files '())
+  (setq monky-parents nil
+        monky-merged-files nil)
   (monky-create-buffer-sections
     (monky-with-section 'status nil
       (monky-insert-parents)
@@ -2831,7 +2831,7 @@ With a non numeric prefix ARG, show all entries"
 ;;; Queue Staged Changes
 
 (defun monky-queue-stage-file (file)
-  (add-to-list 'monky-queue-staged-files file))
+  (push file monky-queue-staged-files))
 
 (defun monky-queue-unstage-file (file)
   (setq monky-queue-staged-files (delete file monky-queue-staged-files)))
