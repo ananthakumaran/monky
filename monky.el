@@ -1571,9 +1571,8 @@ With a prefix argument, visit in other window."
      (monky-revert-file (monky-diff-item-file (monky-current-section))))
     ((missing file)
      (monky-revert-file (monky-section-info (monky-current-section))))
-    ((shelves)
-     (monky-delete-shelf
-      (get-text-property (line-beginning-position) 'monky-shelf-name)))))
+    ((shelf)
+     (monky-delete-shelf (monky-section-info (monky-current-section))))))
 
 (defun monky-quit-window (&optional kill-buffer)
   "Bury the buffer and delete its window.  With a prefix argument, kill the
