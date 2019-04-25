@@ -2088,8 +2088,7 @@ This is naive and assumes that shelf names never contain (."
 
 ;;; Parents
 
-(defvar monky-parents nil)
-(make-variable-buffer-local 'monky-parents)
+(defvar-local monky-parents nil)
 
 (defun monky-merge-p ()
   (> (length monky-parents) 1))
@@ -2134,8 +2133,7 @@ This is naive and assumes that shelf names never contain (."
 
 ;;; Merged Files
 
-(defvar monky-merged-files nil)
-(make-variable-buffer-local 'monky-merged-files)
+(defvar-local monky-merged-files nil)
 
 (defun monky-wash-merged-files ()
   (monky-wash-status-lines
@@ -2598,8 +2596,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defvar monky-branch-re "^\\(.*[^\s]\\)\s* \\([0-9]+\\):\\([0-9a-z]\\{12\\}\\)\\(.*\\)$")
 
-(defvar monky-current-branch-name nil)
-(make-variable-buffer-local 'monky-current-branch-name)
+(defvar-local monky-current-branch-name nil)
 
 (defun monky-present-branch-line (name rev node status)
   (concat rev " : "
@@ -2675,8 +2672,7 @@ With a non numeric prefix ARG, show all entries"
 
 (defvar monky-queue-buffer-name "*monky-queue*")
 
-(defvar monky-patches-dir ".hg/patches/")
-(make-variable-buffer-local 'monky-patches-dir)
+(defvar-local monky-patches-dir ".hg/patches/")
 
 (defun monky-patch-series-file ()
   (concat monky-patches-dir "series"))
