@@ -796,8 +796,7 @@ FUNC should leave point at the end of the modified region"
 ;; parent and grand-parent, etc provide the context.
 
 (defstruct monky-section
-  parent children beginning end type title hidden info
-  needs-refresh-on-show)
+  parent children beginning end type title hidden info)
 
 (defun monky-set-section-info (info &optional section)
   (setf (monky-section-info (or section monky-top-section)) info))
@@ -1051,20 +1050,17 @@ CMD is an external command that will be run with ARGS as arguments"
 (defun monky-section-set-hidden (section hidden)
   "Hide SECTION if HIDDEN is not nil, show it otherwise."
   (setf (monky-section-hidden section) hidden)
-  (if (and (not hidden)
-           (monky-section-needs-refresh-on-show section))
-      (monky-refresh)
-    (let ((inhibit-read-only t)
-          (beg (save-excursion
-                 (goto-char (monky-section-beginning section))
-                 (forward-line)
-                 (point)))
-          (end (monky-section-end section)))
-      (if (< beg end)
-          (put-text-property beg end 'invisible hidden)))
-    (if (not hidden)
-        (dolist (c (monky-section-children section))
-          (monky-section-set-hidden c (monky-section-hidden c))))))
+  (let ((inhibit-read-only t)
+        (beg (save-excursion
+               (goto-char (monky-section-beginning section))
+               (forward-line)
+               (point)))
+        (end (monky-section-end section)))
+    (if (< beg end)
+        (put-text-property beg end 'invisible hidden)))
+  (if (not hidden)
+      (dolist (c (monky-section-children section))
+        (monky-section-set-hidden c (monky-section-hidden c)))))
 
 (defun monky-toggle-section ()
   "Toggle hidden status of current section."
