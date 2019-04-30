@@ -1592,7 +1592,7 @@ buffer instead."
                (not (buffer-modified-p buffer)))
       (with-current-buffer buffer
         (condition-case var
-            (revert-buffer t t nil)
+            (revert-buffer t t t)
           (error (let ((signal-data (cadr var)))
                    (cond (t (monky-bug-report signal-data))))))))))
 
