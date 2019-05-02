@@ -2408,24 +2408,23 @@ With a non numeric prefix ARG, show all entries"
   (monky-refresh))
 
 (defun monky-refresh-log-buffer (revs path)
-  (lexical-let ((revs revs))
-    (lambda ()
-      (monky-create-log-buffer-sections
-        (monky-hg-section
-	 'commits
-	 (if path
-	     (format "Commits affecting %s:"
-		     (file-relative-name path monky-root-dir))
-	   "Commits:")
-         #'monky-wash-logs
-         "log"
-         "--config" "extensions.graphlog="
-         "-G"
-         "--limit" (number-to-string monky-log-cutoff-length)
-         "--style" monky-hg-style-log-graph
-         (if revs "--rev" "")
-         (if revs revs "")
-	 (if path path ""))))))
+  (lambda ()
+    (monky-create-log-buffer-sections
+      (monky-hg-section
+       'commits
+       (if path
+	   (format "Commits affecting %s:"
+		   (file-relative-name path monky-root-dir))
+	 "Commits:")
+       #'monky-wash-logs
+       "log"
+       "--config" "extensions.graphlog="
+       "-G"
+       "--limit" (number-to-string monky-log-cutoff-length)
+       "--style" monky-hg-style-log-graph
+       (if revs "--rev" "")
+       (if revs revs "")
+       (if path path "")))))
 
 (defun monky-next-sha1 (pos)
   "Return position of next sha1 after given position POS"
