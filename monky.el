@@ -4,7 +4,7 @@
 
 ;; Author: Anantha kumaran <ananthakumaran@gmail.com>
 ;; URL: http://github.com/ananthakumaran/monky
-;; Version: 0.1
+;; Version: 0.2
 ;; Keywords: tools
 
 ;; Monky is free software: you can redistribute it and/or modify it
