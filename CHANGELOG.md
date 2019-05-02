@@ -1,6 +1,7 @@
 # v0.2
 
-No changes yet.
+Added command `monky-log-buffer-file` to log commits that touched the
+current file.
 
 # v0.1
 

@@ -2264,6 +2264,11 @@ PROPERTIES is the arguments for the function `propertize'."
   (interactive)
   (monky-log "ancestors(.)"))
 
+(defun monky-log-buffer-file ()
+  "View a log of commits that affected the current file."
+  (interactive)
+  (monky-log "ancestors(.)" (buffer-file-name)))
+
 (defun monky-log-all ()
   (interactive)
   (monky-log nil))
@@ -2272,13 +2277,13 @@ PROPERTIES is the arguments for the function `propertize'."
   (interactive  "sRevset: ")
   (monky-log revset))
 
-(defun monky-log (revs)
+(defun monky-log (revs &optional path)
   (monky-with-process
     (let ((topdir (monky-get-root-dir)))
       (pop-to-buffer monky-log-buffer-name)
       (setq default-directory topdir
             monky-root-dir topdir)
-      (monky-mode-init topdir 'log (monky-refresh-log-buffer revs))
+      (monky-mode-init topdir 'log (monky-refresh-log-buffer revs path))
       (monky-log-mode t))))
 
 (defvar monky-log-graph-re
@@ -2402,19 +2407,25 @@ With a non numeric prefix ARG, show all entries"
    (t (setq monky-log-cutoff-length (* monky-log-cutoff-length 2))))
   (monky-refresh))
 
-(defun monky-refresh-log-buffer (revs)
+(defun monky-refresh-log-buffer (revs path)
   (lexical-let ((revs revs))
     (lambda ()
       (monky-create-log-buffer-sections
-        (monky-hg-section 'commits "Commits:"
-                          #'monky-wash-logs
-                          "log"
-                          "--config" "extensions.graphlog="
-                          "-G"
-                          "--limit" (number-to-string monky-log-cutoff-length)
-                          "--style" monky-hg-style-log-graph
-                          (if revs "--rev" "")
-                          (if revs revs ""))))))
+        (monky-hg-section
+	 'commits
+	 (if path
+	     (format "Commits affecting %s:"
+		     (file-relative-name path monky-root-dir))
+	   "Commits:")
+         #'monky-wash-logs
+         "log"
+         "--config" "extensions.graphlog="
+         "-G"
+         "--limit" (number-to-string monky-log-cutoff-length)
+         "--style" monky-hg-style-log-graph
+         (if revs "--rev" "")
+         (if revs revs "")
+	 (if path path ""))))))
 
 (defun monky-next-sha1 (pos)
   "Return position of next sha1 after given position POS"
