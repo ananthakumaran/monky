@@ -1987,9 +1987,12 @@ CALLBACK is called with the status and the associated filename."
 
 (defun monky-insert-diff-title (status file)
   (insert
-   (propertize
-    (format "%-10s %s\n" (symbol-name status) file)
-    'face 'monky-diff-title)))
+   (format "%-10s %s\n"
+          (propertize
+           (symbol-name status)
+           'face
+           (if (eq status 'unresolved) 'warning 'monky-diff-title))
+          (propertize file 'face 'monky-diff-title))))
 
 ;;; Untracked files
 
