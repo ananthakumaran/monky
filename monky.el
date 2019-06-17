@@ -2136,16 +2136,20 @@ This is naive and assumes that shelf names never contain (."
 (defvar-local monky-merged-files nil)
 
 (defun monky-wash-merged-files ()
-  (monky-wash-status-lines
-   (lambda (status file)
-     (let ((monky-section-hidden-default monky-hide-diffs))
-       (push file monky-merged-files)
-       ;; XXX hg uses R for resolved and removed status
-       (let ((status (if (eq status 'unresolved)
-                         'unresolved
-                       'resolved)))
-         (monky-with-section file 'diff
-           (monky-insert-diff file status)))))))
+  (let ((empty t))
+    (monky-wash-status-lines
+     (lambda (status file)
+       (setq empty nil)
+       (let ((monky-section-hidden-default monky-hide-diffs))
+        (push file monky-merged-files)
+        ;; XXX hg uses R for resolved and removed status
+        (let ((status (if (eq status 'unresolved)
+                           'unresolved
+                        'resolved)))
+           (monky-with-section file 'diff
+             (monky-insert-diff file status))))))
+    (unless empty
+      (insert "\n"))))
 
 (defun monky-insert-merged-files ()
   (let ((monky-hide-diffs t))
