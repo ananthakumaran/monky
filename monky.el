@@ -699,6 +699,11 @@ FUNC should leave point at the end of the modified region"
     (define-key map (kbd "b") 'monky-branches)
     (define-key map (kbd "Q") 'monky-queue)
     (define-key map (kbd "q") 'monky-quit-window)
+
+    (define-key map (kbd "M-1") 'monky-section-show-level-1-all)
+    (define-key map (kbd "M-2") 'monky-section-show-level-2-all)
+    (define-key map (kbd "M-3") 'monky-section-show-level-3-all)
+    (define-key map (kbd "M-4") 'monky-section-show-level-4-all)
     map))
 
 (defvar monky-status-mode-map
@@ -1069,6 +1074,50 @@ CMD is an external command that will be run with ARGS as arguments"
     (when (monky-section-parent section)
       (goto-char (monky-section-beginning section))
       (monky-section-set-hidden section (not (monky-section-hidden section))))))
+
+(defun monky-section-show-level-1-all ()
+  "Collapse all the sections in the monky status buffer."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (not (eobp))
+      (let ((section (monky-current-section)))
+	(monky-section-set-hidden section t))
+      (forward-line 1))))
+
+(defun monky-section-show-level-2-all ()
+  "Show all the files changes, but not their contents."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (not (eobp))
+      (let ((section (monky-current-section)))
+	(if (memq (monky-section-type section) (list 'hunk 'diff))
+	    (monky-section-set-hidden section t)
+	  (monky-section-set-hidden section nil)))
+      (forward-line 1))))
+
+(defun monky-section-show-level-3-all ()
+  "Expand all file contents and line numbers, but not the actual changes."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (not (eobp))
+      (let ((section (monky-current-section)))
+	(if (memq (monky-section-type section) (list 'hunk))
+	    (monky-section-set-hidden section t)
+	  (monky-section-set-hidden section nil)))
+      (forward-line 1))))
+
+(defun monky-section-show-level-4-all ()
+  "Expand all sections."
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (while (not (eobp))
+      (let ((section (monky-current-section)))
+	(monky-section-set-hidden section nil))
+      (forward-line 1))))
 
 ;;; Running commands
 
