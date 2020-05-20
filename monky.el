@@ -6,7 +6,7 @@
 ;; URL: http://github.com/ananthakumaran/monky
 ;; Version: 0.2
 ;; Keywords: tools
-;; Package-Requires: ((emacs "24.4"))
+;; Package-Requires: ((emacs "24.4") (with-editor "2.9"))
 
 ;; Monky is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -1140,91 +1140,91 @@ CMD is an external command that will be run with ARGS as arguments"
         (dir default-directory)
         (buf (get-buffer-create monky-process-buffer-name))
         (successp nil))
-    (monky-set-mode-line-process
-     (monky-process-indicator-from-command cmd-and-args))
-    (setq monky-process-client-buffer (current-buffer))
-    (with-current-buffer buf
-      (view-mode 1)
-      (set (make-local-variable 'view-no-disable-on-exit) t)
-      (setq view-exit-action
-            (lambda (buffer)
-              (with-current-buffer buffer
-                (bury-buffer))))
-      (setq buffer-read-only t)
-      (let ((inhibit-read-only t))
-        (setq default-directory dir)
-        (if noerase
-            (goto-char (point-max))
-          (erase-buffer))
-        (insert "$ " (or logline
-                         (mapconcat #'identity cmd-and-args " "))
-                "\n")
-        (cond (nowait
-               (setq monky-process
-                     (let ((process-connection-type nil))
-                       (apply 'monky-start-process cmd buf cmd args)))
-               (set-process-sentinel monky-process 'monky-process-sentinel)
-               (set-process-filter monky-process 'monky-process-filter)
-               (when input
+    (with-editor
+      (monky-set-mode-line-process
+       (monky-process-indicator-from-command cmd-and-args))
+      (setq monky-process-client-buffer (current-buffer))
+      (with-current-buffer buf
+        (view-mode 1)
+        (set (make-local-variable 'view-no-disable-on-exit) t)
+        (setq view-exit-action
+              (lambda (buffer)
+                (with-current-buffer buffer
+                  (bury-buffer))))
+        (setq buffer-read-only t)
+        (let ((inhibit-read-only t))
+          (setq default-directory dir)
+          (if noerase
+              (goto-char (point-max))
+            (erase-buffer))
+          (insert "$ " (or logline
+                           (mapconcat #'identity cmd-and-args " "))
+                  "\n")
+          (cond (nowait
+                 (setq monky-process
+                       (let ((process-connection-type nil))
+                         (apply 'monky-start-process cmd buf cmd args)))
+                 (set-process-sentinel monky-process 'monky-process-sentinel)
+                 (with-editor-set-process-filter monky-process 'monky-process-filter)
+                 (when input
+                   (with-current-buffer input
+                     (process-send-region monky-process
+                                          (point-min) (point-max))
+                     (process-send-eof monky-process)
+                     (sit-for 0.1 t)))
+                 (cond ((= monky-process-popup-time 0)
+                        (pop-to-buffer (process-buffer monky-process)))
+                       ((> monky-process-popup-time 0)
+                        (run-with-timer
+                         monky-process-popup-time nil
+                         (function
+                          (lambda (buf)
+                            (with-current-buffer buf
+                              (when monky-process
+                                (display-buffer (process-buffer monky-process))
+                                (goto-char (point-max))))))
+                         (current-buffer))))
+                 (setq successp t))
+  	      (monky-cmd-process
+  	       (let ((monky-cmd-process-input-buffer input)
+  		     (monky-cmd-process-input-point (and input
+  						         (with-current-buffer input
+  						           (point-min)))))
+  		 (setq successp
+  		       (equal (apply #'monky-cmdserver-runcommand (cdr cmd-and-args)) 0))
+  		 (monky-set-mode-line-process nil)
+  		 (monky-need-refresh monky-process-client-buffer)))
+                (input
                  (with-current-buffer input
+                   (setq default-directory dir)
+                   (setq monky-process
+                         ;; Don't use a pty, because it would set icrnl
+                         ;; which would modify the input (issue #20).
+                         (let ((process-connection-type nil))
+                           (apply 'monky-start-process cmd buf cmd args)))
+                   (with-editor-set-process-filter monky-process 'monky-process-filter)
                    (process-send-region monky-process
                                         (point-min) (point-max))
                    (process-send-eof monky-process)
-                   (sit-for 0.1 t)))
-               (cond ((= monky-process-popup-time 0)
-                      (pop-to-buffer (process-buffer monky-process)))
-                     ((> monky-process-popup-time 0)
-                      (run-with-timer
-                       monky-process-popup-time nil
-                       (function
-                        (lambda (buf)
-                          (with-current-buffer buf
-                            (when monky-process
-                              (display-buffer (process-buffer monky-process))
-                              (goto-char (point-max))))))
-                       (current-buffer))))
-               (setq successp t))
-	      (monky-cmd-process
-	       (let ((monky-cmd-process-input-buffer input)
-		     (monky-cmd-process-input-point (and input
-						         (with-current-buffer input
-						           (point-min)))))
-		 (setq successp
-		       (equal (apply #'monky-cmdserver-runcommand (cdr cmd-and-args)) 0))
-		 (monky-set-mode-line-process nil)
-		 (monky-need-refresh monky-process-client-buffer)))
-              (input
-               (with-current-buffer input
-                 (setq default-directory dir)
-                 (setq monky-process
-                       ;; Don't use a pty, because it would set icrnl
-                       ;; which would modify the input (issue #20).
-                       (let ((process-connection-type nil))
-                         (apply 'monky-start-process cmd buf cmd args)))
-                 (set-process-filter monky-process 'monky-process-filter)
-                 (process-send-region monky-process
-                                      (point-min) (point-max))
-                 (process-send-eof monky-process)
-                 (while (equal (process-status monky-process) 'run)
-                   (sit-for 0.1 t))
+                   (while (equal (process-status monky-process) 'run)
+                     (sit-for 0.1 t))
+                   (setq successp
+                         (equal (process-exit-status monky-process) 0))
+                   (setq monky-process nil))
+                 (monky-set-mode-line-process nil)
+                 (monky-need-refresh monky-process-client-buffer))
+                (t
                  (setq successp
-                       (equal (process-exit-status monky-process) 0))
-                 (setq monky-process nil))
-               (monky-set-mode-line-process nil)
-               (monky-need-refresh monky-process-client-buffer))
-              (t
-               (setq successp
-                     (equal (apply 'monky-process-file-single cmd nil buf nil args) 0))
-               (monky-set-mode-line-process nil)
-               (monky-need-refresh monky-process-client-buffer))))
-      (or successp
-          noerror
-          (error
-           (or monky-cmd-error-message
-	       (monky-abort-message (get-buffer monky-process-buffer-name))
-               "Hg failed")))
-      successp)))
-
+                       (equal (apply 'monky-process-file-single cmd nil buf nil args) 0))
+                 (monky-set-mode-line-process nil)
+                 (monky-need-refresh monky-process-client-buffer))))
+        (or successp
+            noerror
+            (error
+             (or monky-cmd-error-message
+  	       (monky-abort-message (get-buffer monky-process-buffer-name))
+                 "Hg failed")))
+        successp))))
 
 (defun monky-process-sentinel (process event)
   (let ((msg (format "Hg %s." (substring event 0 -1)))
