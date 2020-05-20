@@ -1,11 +1,12 @@
-;;; monky.el --- Control Hg from Emacs.  -*- lexical-binding: t; -*-
+;;; monky.el --- Control Hg  -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2011 Anantha Kumaran.
 
-;; Author: Anantha kumaran <ananthakumaran@gmail.com>
+;; Author: Anantha Kumaran <ananthakumaran@gmail.com>
 ;; URL: http://github.com/ananthakumaran/monky
 ;; Version: 0.2
 ;; Keywords: tools
+;; Package-Requires: ((emacs "24.4"))
 
 ;; Monky is free software: you can redistribute it and/or modify it
 ;; under the terms of the GNU General Public License as published by
@@ -364,10 +365,6 @@ Many Monky faces inherit from this one by default."
 (put 'monky-mode 'mode-class 'special)
 
 ;;; Compatibilities
-
-(eval-when-compile
-  (when (< emacs-major-version 23)
-    (defvar line-move-visual nil)))
 
 ;;; Utilities
 
@@ -1407,8 +1404,7 @@ With a prefix argument, visit in other window."
     ((staged diff)
      (user-error "Already staged"))
     ((changes diff)
-     (monky-ediff-changes (monky-current-section)))
-    ))
+     (monky-ediff-changes (monky-current-section)))))
 
 (defun monky-ediff-merged (item)
   (let* ((file (monky-diff-item-file item))
