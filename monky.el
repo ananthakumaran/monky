@@ -24,7 +24,6 @@
 
 ;;; Code:
 
-(require 'cl)
 (require 'cl-lib)
 (require 'bindat)
 (require 'ediff)
@@ -800,7 +799,7 @@ FUNC should leave point at the end of the modified region"
 ;; identifies what kind of object it represents (if any), and the
 ;; parent and grand-parent, etc provide the context.
 
-(defstruct monky-section
+(cl-defstruct monky-section
   parent children beginning end type title hidden info)
 
 (defun monky-set-section-info (info &optional section)
@@ -1661,14 +1660,14 @@ buffer instead."
             (funcall func)
           (when monky-refresh-needing-buffers
             (monky-revert-buffers dir)
-            (dolist (b (adjoin status-buffer
-                               monky-refresh-needing-buffers))
+            (dolist (b (cl-adjoin status-buffer
+                                  monky-refresh-needing-buffers))
               (monky-refresh-buffer b))))))))
 
 (defun monky-need-refresh (&optional buffer)
   (let ((buffer (or buffer (current-buffer))))
     (setq monky-refresh-needing-buffers
-          (adjoin buffer monky-refresh-needing-buffers))))
+          (cl-adjoin buffer monky-refresh-needing-buffers))))
 
 (defun monky-refresh ()
   "Refresh current buffer to match repository state.
@@ -1821,13 +1820,13 @@ before the last command."
 
 (defun monky-find-buffer (submode &optional dir)
   (let ((rootdir (expand-file-name (or dir (monky-get-root-dir)))))
-    (find-if (lambda (buf)
-               (with-current-buffer buf
-                 (and default-directory
-                      (equal (expand-file-name default-directory) rootdir)
-                      (eq major-mode 'monky-mode)
-                      (eq monky-submode submode))))
-             (buffer-list))))
+    (cl-find-if (lambda (buf)
+                  (with-current-buffer buf
+                    (and default-directory
+                         (equal (expand-file-name default-directory) rootdir)
+                         (eq major-mode 'monky-mode)
+                         (eq monky-submode submode))))
+                (buffer-list))))
 
 (defun monky-find-status-buffer (&optional dir)
   (monky-find-buffer 'status dir))
@@ -1853,9 +1852,9 @@ before the last command."
   "Return an alist of (name . value) for section"
   (mapcar (lambda (item)
             (cons (cdar item) (cdr item)))
-          (remove-if-not (lambda (item)
-                           (equal section (caar item)))
-                         (monky-hg-config))))
+          (cl-remove-if-not (lambda (item)
+                              (equal section (caar item)))
+                            (monky-hg-config))))
 
 (defvar monky-el-directory
   (file-name-directory (or load-file-name default-directory))
@@ -1894,7 +1893,7 @@ before the last command."
 CALLBACK is called with the status and the associated filename."
   (while (and (not (eobp))
               (looking-at "\\([A-Z!? ]\\) \\([^\t\n]+\\)$"))
-    (let ((status (case (string-to-char (match-string-no-properties 1))
+    (let ((status (cl-case (string-to-char (match-string-no-properties 1))
                     (?M 'modified)
                     (?A 'new)
                     (?R 'removed)
@@ -2074,7 +2073,7 @@ CALLBACK is called with the status and the associated filename."
 
 (defun monky-insert-changes ()
   (let ((monky-hide-diffs t))
-    (setq monky-old-staged-files (copy-list monky-staged-files))
+    (setq monky-old-staged-files (cl-copy-list monky-staged-files))
     (setq monky-staged-files '())
     (monky-hg-section 'changes "Changes:" #'monky-wash-changes
                       "status" "--modified" "--added" "--removed")))
@@ -2419,7 +2418,7 @@ Example:
                    (monky-decode-xml-entities date)
                    (monky-decode-xml-entities msg)))
           (monky-set-section-info id)
-          (when monky-log-count (incf monky-log-count))
+          (when monky-log-count (cl-incf monky-log-count))
           (forward-line)
           (when (looking-at "^\\([\\/@o+-|\s]+\s*\\)$")
             (let ((graph (match-string 1)))
@@ -2763,7 +2762,7 @@ With a non numeric prefix ARG, show all entries"
       (goto-char (point-max)))))
 
 (defun monky-insert-guards (patch)
-  (let ((guards (remove-if
+  (let ((guards (cl-remove-if
                  (lambda (guard) (string= "unguarded" guard))
                  (split-string
                   (cadr (split-string
@@ -2865,7 +2864,7 @@ With a non numeric prefix ARG, show all entries"
 ;;; Qdiff
 (defun monky-insert-queue-discarding ()
   (when (monky-qtip-p)
-    (setq monky-queue-old-staged-files (copy-list monky-queue-staged-files))
+    (setq monky-queue-old-staged-files (cl-copy-list monky-queue-staged-files))
     (setq monky-queue-staged-files '())
     (let ((monky-hide-diffs t))
       (monky-hg-section 'discarding "Discarding (qdiff):"
@@ -2880,8 +2879,8 @@ With a non numeric prefix ARG, show all entries"
       (insert (propertize "Staged changes (qdiff):"
                           'face 'monky-section-title) "\n")
       (let ((monky-section-hidden-default t))
-        (dolist (file (delete-dups (copy-list (append monky-queue-staged-files
-                                                      monky-staged-files))))
+        (dolist (file (delete-dups (cl-copy-list (append monky-queue-staged-files
+                                                         monky-staged-files))))
           (monky-with-section file 'diff
             (monky-insert-diff file nil "qdiff")))))
     (insert "\n")))
@@ -3162,7 +3161,7 @@ With a non numeric prefix ARG, show all entries"
   (when (= (buffer-size) 0)
     (user-error "No %s message" monky-log-edit-operation))
   (let ((commit-buf (current-buffer)))
-    (case monky-log-edit-operation
+    (cl-case monky-log-edit-operation
       ('commit
        (with-current-buffer (monky-find-status-buffer default-directory)
          (apply #'monky-run-async-with-input commit-buf
