@@ -1,4 +1,4 @@
-# Monky An Emacs mode for Hg [![Build Status](https://travis-ci.org/ananthakumaran/monky.svg?branch=master)](https://travis-ci.org/ananthakumaran/monky)
+# Monky An Emacs mode for Hg
 
 Monky provides an interactive interface for Hg.
 
