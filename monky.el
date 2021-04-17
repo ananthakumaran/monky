@@ -436,7 +436,7 @@ refreshes buffers."
     (let ((str (buffer-substring (point-min) (+ (point-min) size))))
       (delete-region (point-min) (+ (point-min) size))
       (goto-char (point-min))
-      (vconcat str))))
+      (concat str))))
 
 (defun monky-cmdserver-read ()
   "Read one channel and return cons (CHANNEL . RAW-DATA)."
