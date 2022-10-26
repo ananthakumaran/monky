@@ -30,7 +30,7 @@ current status. Look at the [documentation][monky-documentation] for further det
 Heavily borrowed from [Magit][magit]. Thanks to Marius Vollmer.
 
 [magit]: http://github.com/magit/magit
-[monky-documentation]: http://ananthakumaran.github.com/monky/index.html
+[monky-documentation]: https://ananthakumaran.in/monky/
 
 ## Contributors
 [ananthakumaran](https://github.com/ananthakumaran) (Anantha Kumaran)
