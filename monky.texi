@@ -16,6 +16,11 @@ Texts.
 @end quotation
 @end copying
 
+@dircategory Emacs
+@direntry
+* Monky: (monky).               An interactive interface for Hg.
+@end direntry
+
 @node Top
 @top Monky User Manual
 
@@ -65,7 +70,7 @@ files unmodified during the merge.
 @node Untracked files
 @chapter Untracked files
 
-you can add a untracked file by typing key @kbd{s}. Type @kbd{k} to
+You can add a untracked file by typing key @kbd{s}. Type @kbd{k} to
 delete the file.
 
 @node Missing Files
